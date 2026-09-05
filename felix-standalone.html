@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FELIX — Ask FELIX</title>
+<meta name="description" content="FELIX field assistant — a voice-driven Ask FELIX experience for pharma field teams." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================================
+ * FELIX — Ask FELIX
+ * ==========================================================================*/
+
+:root {
+  --bg:        #070b16;
+  --bg-2:      #0b1120;
+  --surface:   #111a2e;
+  --surface-2: #16213a;
+  --line:      #1f2c47;
+  --line-soft: #182339;
+
+  --text:      #e8eefc;
+  --text-2:    #9aabc9;
+  --text-3:    #6c7f9e;
+
+  --brand:     #2f6bff;
+  --brand-2:   #22d3ee;
+  --brand-dim: rgba(47, 107, 255, .16);
+
+  --high:      #ff8a5b;
+  --high-bg:   rgba(255, 138, 91, .14);
+  --med:       #f6c453;
+  --med-bg:    rgba(246, 196, 83, .13);
+  --low:       #7fb2ff;
+  --low-bg:    rgba(127, 178, 255, .13);
+  --good:      #4ade80;
+  --good-bg:   rgba(74, 222, 128, .12);
+
+  --r:   14px;
+  --r-s: 10px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background:
+    radial-gradient(1100px 600px at 78% -12%, rgba(47, 107, 255, .18), transparent 62%),
+    radial-gradient(900px 520px at 6% 108%, rgba(34, 211, 238, .10), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  font: 400 15px/1.55 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── Shell ──────────────────────────────────────────────────────────── */
+
+.app {
+  display: grid;
+  grid-template-columns: 68px 1fr;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 0;
+  background: rgba(9, 14, 26, .72);
+  border-right: 1px solid var(--line-soft);
+  backdrop-filter: blur(12px);
+}
+
+.rail-logo {
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border-radius: 11px;
+  background: linear-gradient(140deg, var(--brand), var(--brand-2));
+  color: #04101f;
+  font-weight: 700; font-size: 18px;
+  box-shadow: 0 6px 20px rgba(47, 107, 255, .40);
+}
+
+.rail-nav { display: flex; flex-direction: column; gap: 6px; margin-top: 18px; flex: 1; }
+
+.rail-btn {
+  width: 42px; height: 42px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 11px;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: .18s;
+}
+.rail-btn:hover { color: var(--text); background: var(--surface); }
+.rail-btn.is-active { color: #fff; background: var(--brand-dim); box-shadow: inset 0 0 0 1px rgba(47, 107, 255, .38); }
+
+.rail-user {
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  font-size: 12px; font-weight: 600; color: var(--text-2);
+}
+
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+/* ── Topbar ─────────────────────────────────────────────────────────── */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 0 24px;
+  height: 62px;
+  border-bottom: 1px solid var(--line-soft);
+  background: rgba(9, 14, 26, .55);
+  backdrop-filter: blur(12px);
+  flex: none;
+}
+
+.brand { display: flex; align-items: baseline; gap: 7px; }
+.brand-mark { font-weight: 700; font-size: 19px; letter-spacing: .14em; }
+.brand-by { font-size: 11px; color: var(--text-3); letter-spacing: .1em; text-transform: uppercase; }
+
+.tabs { display: flex; gap: 2px; margin-left: 8px; }
+
+.tab {
+  position: relative;
+  padding: 20px 15px;
+  border: 0; background: none;
+  color: var(--text-3);
+  font: 500 14px Inter, sans-serif;
+  cursor: pointer;
+  transition: color .18s;
+}
+.tab:hover { color: var(--text-2); }
+.tab.is-active { color: var(--text); }
+.tab.is-active::after {
+  content: '';
+  position: absolute; left: 12px; right: 12px; bottom: 0;
+  height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--brand), var(--brand-2));
+}
+
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 11px; }
+.whoami { text-align: right; line-height: 1.25; }
+.whoami-name { display: block; font-size: 13px; font-weight: 600; }
+.whoami-role { display: block; font-size: 11px; color: var(--text-3); }
+.avatar {
+  width: 33px; height: 33px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: linear-gradient(140deg, var(--brand), var(--brand-2));
+  color: #04101f; font-size: 12px; font-weight: 700;
+}
+
+/* ── Panels ─────────────────────────────────────────────────────────── */
+
+.panel { display: none; flex: 1; min-height: 0; flex-direction: column; }
+.panel.is-active { display: flex; }
+
+.ask-head {
+  display: flex; align-items: flex-start; gap: 20px;
+  padding: 22px 30px 14px;
+  flex: none;
+}
+.ask-title h1 { margin: 0 0 4px; font-size: 21px; font-weight: 600; letter-spacing: -.01em; }
+.ask-title p  { margin: 0; color: var(--text-3); font-size: 13.5px; max-width: 62ch; }
+.ask-actions { margin-left: auto; display: flex; gap: 8px; }
+
+.ghost-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  font: 500 12.5px Inter, sans-serif;
+  cursor: pointer;
+  transition: .18s;
+}
+.ghost-btn:hover { color: var(--text); border-color: #2b3d61; background: var(--surface-2); }
+.ghost-btn svg { width: 16px; height: 16px; }
+.ghost-btn .ico-off { display: none; }
+.ghost-btn.is-off { color: var(--text-3); }
+.ghost-btn.is-off .ico-on { display: none; }
+.ghost-btn.is-off .ico-off { display: inline; }
+
+.banner {
+  margin: 0 30px 10px;
+  padding: 11px 14px;
+  border-radius: var(--r-s);
+  background: var(--med-bg);
+  border: 1px solid rgba(246, 196, 83, .28);
+  color: #f4dfae;
+  font-size: 13px;
+}
+
+/* ── Thread ─────────────────────────────────────────────────────────── */
+
+.thread {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 30px 20px;
+  scroll-behavior: smooth;
+}
+.thread::-webkit-scrollbar { width: 9px; }
+.thread::-webkit-scrollbar-thumb { background: #1c2740; border-radius: 9px; border: 2px solid transparent; background-clip: content-box; }
+
+.msg { display: flex; gap: 12px; margin: 20px 0; max-width: 940px; animation: rise .3s ease both; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+
+.msg-av {
+  flex: none;
+  width: 30px; height: 30px; border-radius: 9px;
+  display: grid; place-items: center;
+  font-size: 12px; font-weight: 700;
+}
+.msg-felix .msg-av { background: linear-gradient(140deg, var(--brand), var(--brand-2)); color: #04101f; }
+.msg-user  .msg-av { background: var(--surface-2); border: 1px solid var(--line); color: var(--text-2); }
+
+.msg-body { min-width: 0; flex: 1; }
+.msg-who  { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3); margin-bottom: 5px; }
+
+.bubble { font-size: 15px; line-height: 1.62; color: var(--text); min-height: 22px; }
+.bubble strong { color: #fff; font-weight: 600; }
+
+.msg-user .bubble {
+  display: inline-block;
+  padding: 9px 14px;
+  border-radius: 4px 14px 14px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+
+.bubble.typing { display: inline-flex; gap: 4px; align-items: center; padding: 8px 0; }
+.bubble.typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--text-3); animation: blink 1.1s infinite; }
+.bubble.typing i:nth-child(2) { animation-delay: .16s; }
+.bubble.typing i:nth-child(3) { animation-delay: .32s; }
+@keyframes blink { 0%, 60%, 100% { opacity: .25; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+
+.blocks { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.blocks:empty { margin: 0; }
+
+/* ── Cards ──────────────────────────────────────────────────────────── */
+
+.card, .callout {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity .28s, transform .28s;
+}
+.card.in, .callout.in { opacity: 1; transform: none; }
+
+.card {
+  background: linear-gradient(180deg, var(--surface), rgba(17, 26, 46, .72));
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 15px 17px;
+}
+.card-title {
+  margin: 0 0 11px;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* HCP card */
+.hcp { position: relative; overflow: hidden; }
+.hcp::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--low);
+}
+.hcp.lvl-high::before   { background: var(--high); }
+.hcp.lvl-medium::before { background: var(--med); }
+.hcp.lvl-low::before    { background: var(--low); }
+
+.hcp-head { display: flex; align-items: center; gap: 11px; }
+.hcp-av {
+  width: 38px; height: 38px; border-radius: 11px; flex: none;
+  display: grid; place-items: center;
+  background: var(--surface-2); border: 1px solid var(--line);
+  font-size: 13px; font-weight: 700; color: var(--text-2);
+}
+.hcp-id h4 { margin: 0; font-size: 15.5px; font-weight: 600; }
+.hcp-id p  { margin: 1px 0 0; font-size: 12.5px; color: var(--text-3); }
+
+.pri {
+  margin-left: auto;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase;
+  background: var(--low-bg); color: var(--low);
+}
+.pri-high { background: var(--high-bg); color: var(--high); }
+.pri-med, .pri-medium { background: var(--med-bg); color: var(--med); }
+.pri-low { background: var(--low-bg); color: var(--low); }
+
+.hcp-where {
+  display: flex; align-items: center; gap: 7px;
+  margin: 12px 0 0;
+  font-size: 12.5px; color: var(--text-2);
+}
+.hcp-where svg { width: 14px; height: 14px; color: var(--text-3); }
+.hcp-where .dot { color: var(--text-3); }
+
+.hcp-sugg {
+  margin-top: 12px; padding: 12px 13px;
+  border-radius: var(--r-s);
+  background: rgba(47, 107, 255, .09);
+  border: 1px solid rgba(47, 107, 255, .20);
+}
+.hcp-sugg-label {
+  font-size: 10px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: #7fa8ff;
+}
+.hcp-sugg-title { margin: 5px 0 0; font-size: 14px; font-weight: 600; }
+.hcp-sugg-why   { margin: 4px 0 0; font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
+
+.hcp-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 13px 0 0; }
+.hcp-meta dt { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
+.hcp-meta dd { margin: 3px 0 0; font-size: 12.5px; color: var(--text); }
+
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.tag {
+  padding: 3px 9px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--line);
+  font-size: 11px; color: var(--text-2);
+}
+
+/* Key/value */
+.kv { margin: 0; display: flex; flex-direction: column; gap: 0; }
+.kv > div {
+  display: grid; grid-template-columns: 150px 1fr; gap: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.kv > div:last-child { border-bottom: 0; padding-bottom: 0; }
+.kv dt { font-size: 12px; color: var(--text-3); }
+.kv dd { margin: 0; font-size: 13.5px; }
+
+/* Lists */
+.bullets, .checks { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.bullets li, .checks li { position: relative; padding-left: 24px; font-size: 13.5px; color: var(--text); line-height: 1.55; }
+.bullets li::before {
+  content: ''; position: absolute; left: 7px; top: 8px;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--brand-2);
+}
+.checks li::before {
+  content: '✓'; position: absolute; left: 3px; top: -1px;
+  color: var(--good); font-size: 13px; font-weight: 700;
+}
+
+/* Slots */
+.slots { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.slot {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: var(--r-s);
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.slot-time  { font-weight: 600; font-size: 13.5px; min-width: 118px; }
+.slot-label { font-size: 12.5px; color: var(--text-2); flex: 1; }
+.slot-status {
+  padding: 3px 9px; border-radius: 999px;
+  font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+}
+.slot-open   .slot-status { background: var(--good-bg); color: var(--good); }
+.slot-tight  .slot-status { background: var(--med-bg);  color: var(--med); }
+.slot-closed .slot-status { background: rgba(140,160,190,.12); color: var(--text-3); }
+.slot-closed { opacity: .62; }
+
+/* Note */
+.note-body {
+  margin: 0;
+  padding: 13px 14px;
+  border-radius: var(--r-s);
+  background: rgba(5, 9, 18, .55);
+  border: 1px solid var(--line-soft);
+  font: 400 13px/1.65 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+/* Callout */
+.callout {
+  padding: 11px 14px 11px 15px;
+  border-radius: var(--r-s);
+  border-left: 3px solid var(--brand-2);
+  background: rgba(34, 211, 238, .08);
+  font-size: 13px; color: var(--text-2); line-height: 1.55;
+}
+.callout-warn { border-left-color: var(--med);  background: var(--med-bg);  color: #f2ddb2; }
+.callout-good { border-left-color: var(--good); background: var(--good-bg); color: #b6efcb; }
+
+/* ── Composer ───────────────────────────────────────────────────────── */
+
+.composer {
+  flex: none;
+  padding: 14px 30px 18px;
+  border-top: 1px solid var(--line-soft);
+  background: rgba(9, 14, 26, .70);
+  backdrop-filter: blur(12px);
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+.chips:empty { margin: 0; }
+.chip {
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-2);
+  font: 400 12.5px Inter, sans-serif;
+  cursor: pointer;
+  text-align: left;
+  max-width: 100%;
+  transition: .16s;
+  animation: rise .26s ease both;
+}
+.chip:hover { color: var(--text); border-color: rgba(47,107,255,.5); background: var(--brand-dim); }
+
+.composer-row { display: flex; align-items: center; gap: 14px; }
+
+/* Mic orb */
+.mic {
+  --level: 0;
+  position: relative;
+  flex: none;
+  width: 54px; height: 54px;
+  border: 0; border-radius: 50%;
+  background: linear-gradient(140deg, var(--brand), var(--brand-2));
+  color: #04101f;
+  cursor: pointer;
+  display: grid; place-items: center;
+  box-shadow: 0 6px 22px rgba(47, 107, 255, .38);
+  transition: transform .12s;
+}
+.mic:hover { transform: scale(1.04); }
+.mic:active { transform: scale(.96); }
+.mic svg { width: 23px; height: 23px; stroke-width: 1.9; }
+.mic .stop-ico { display: none; fill: currentColor; stroke: none; }
+.mic.is-listening .mic-ico  { display: none; }
+.mic.is-listening .stop-ico { display: block; }
+.mic.is-listening { background: linear-gradient(140deg, #ff5f8f, #ff8a5b); box-shadow: 0 6px 26px rgba(255, 95, 143, .45); }
+
+.mic-ring {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(47, 107, 255, .55);
+  opacity: 0;
+  pointer-events: none;
+}
+.mic.is-listening .mic-ring {
+  border-color: rgba(255, 95, 143, .55);
+  opacity: 1;
+  transform: scale(calc(1 + var(--level) * .55));
+  transition: transform .09s ease-out;
+}
+.mic.is-listening .r2 { transform: scale(calc(1.18 + var(--level) * .75)); opacity: .55; }
+.mic.is-listening .r3 { transform: scale(calc(1.38 + var(--level) * .95)); opacity: .28; }
+
+body.is-speaking .mic { animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 6px 22px rgba(47, 107, 255, .38); }
+  50%      { box-shadow: 0 6px 34px rgba(34, 211, 238, .60); }
+}
+
+.input-wrap {
+  flex: 1;
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 6px 6px 18px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  transition: border-color .18s;
+}
+.input-wrap:focus-within { border-color: rgba(47, 107, 255, .55); }
+
+#input {
+  flex: 1;
+  border: 0; background: none; outline: none;
+  color: var(--text);
+  font: 400 14.5px Inter, sans-serif;
+  min-width: 0;
+}
+#input::placeholder { color: var(--text-3); }
+
+.send {
+  flex: none;
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 0; background: var(--surface-2);
+  color: var(--text-2);
+  display: grid; place-items: center;
+  cursor: pointer; transition: .16s;
+}
+.send:hover { background: var(--brand); color: #04101f; }
+.send svg { width: 17px; height: 17px; fill: currentColor; stroke: none; }
+
+.status { display: flex; align-items: center; gap: 8px; margin-top: 11px; font-size: 12px; color: var(--text-3); }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); flex: none; }
+.status.is-listening .status-dot { background: #ff5f8f; box-shadow: 0 0 0 0 rgba(255,95,143,.6); animation: ping 1.1s infinite; }
+.status.is-speaking  .status-dot { background: var(--brand-2); animation: ping 1.4s infinite; }
+.status.is-thinking  .status-dot { background: var(--med); animation: ping 1s infinite; }
+.status.is-listening .status-text { color: #ff9ab5; }
+@keyframes ping {
+  0%   { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+  100% { box-shadow: 0 0 0 7px transparent; opacity: .55; }
+}
+
+/* ── Other tabs ─────────────────────────────────────────────────────── */
+
+.day, .sugg-list, .cust-list {
+  margin: 0; padding: 0 30px 30px;
+  list-style: none;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 10px;
+  max-width: 900px;
+}
+
+.day-item {
+  display: flex; gap: 16px; align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: var(--r);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.day-time { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; color: var(--text-2); min-width: 46px; }
+.day-body { font-size: 14px; }
+.day-note { display: block; font-size: 12.5px; color: var(--text-3); margin-top: 3px; }
+.day-item.is-done { opacity: .6; }
+.day-item.is-now  { border-color: rgba(47,107,255,.45); background: linear-gradient(180deg, rgba(47,107,255,.10), var(--surface)); }
+
+.sugg {
+  padding: 16px 18px;
+  border-radius: var(--r);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.sugg .pri { margin: 0 0 9px; display: inline-block; }
+.sugg h3 { margin: 0 0 6px; font-size: 15px; font-weight: 600; }
+.sugg p  { margin: 0 0 8px; font-size: 13px; color: var(--text-2); line-height: 1.55; }
+.sugg-meta { font-size: 11.5px; color: var(--text-3); }
+
+.cust {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px;
+  border-radius: var(--r);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.cust-av {
+  width: 38px; height: 38px; border-radius: 11px; flex: none;
+  display: grid; place-items: center;
+  background: var(--surface-2); border: 1px solid var(--line);
+  font-size: 12.5px; font-weight: 700; color: var(--text-2);
+}
+.cust strong { display: block; font-size: 14.5px; }
+.cust span   { display: block; font-size: 12.5px; color: var(--text-2); }
+.cust .cust-loc { font-size: 12px; color: var(--text-3); }
+.cust .pri { margin-left: auto; }
+
+/* ── Responsive ─────────────────────────────────────────────────────── */
+
+@media (max-width: 880px) {
+  .app { grid-template-columns: 1fr; }
+  .rail { display: none; }
+  .topbar { gap: 12px; height: auto; flex-wrap: wrap; padding: 10px 16px; }
+  .tabs { order: 3; width: 100%; overflow-x: auto; margin: 0; }
+  .tab { padding: 12px 11px; white-space: nowrap; }
+  .whoami { display: none; }
+  .ask-head { padding: 16px 16px 10px; flex-wrap: wrap; }
+  .ask-actions { margin-left: 0; }
+  .thread, .composer { padding-left: 16px; padding-right: 16px; }
+  .banner { margin: 0 16px 10px; }
+  .day, .sugg-list, .cust-list { padding-left: 16px; padding-right: 16px; }
+  .kv > div { grid-template-columns: 1fr; gap: 2px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+  .card, .callout { opacity: 1; transform: none; }
+}
+
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── Left rail ───────────────────────────────────────────── -->
+  <aside class="rail">
+    <div class="rail-logo" title="FELIX">F</div>
+    <nav class="rail-nav">
+      <button class="rail-btn" data-tab="my-day"      title="My Day">
+        <svg viewBox="0 0 24 24"><path d="M8 2v3M16 2v3M3 9h18M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>
+      </button>
+      <button class="rail-btn is-active" data-tab="ask" title="Ask FELIX">
+        <svg viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 1 4 4v4a4 4 0 0 1-8 0V7a4 4 0 0 1 4-4z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+      <button class="rail-btn" data-tab="suggestions" title="Suggestions">
+        <svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2z"/><path d="M9 21h6"/></svg>
+      </button>
+      <button class="rail-btn" data-tab="customers"   title="Customers">
+        <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+      </button>
+    </nav>
+    <div class="rail-user" title="Jordan Ellis">JE</div>
+  </aside>
+
+  <!-- ── Main ────────────────────────────────────────────────── -->
+  <main class="main">
+
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">FELIX</span>
+        <span class="brand-by">by ZS</span>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button class="tab is-active" role="tab" data-tab="ask">Ask FELIX</button>
+        <button class="tab" role="tab" data-tab="my-day">My Day</button>
+        <button class="tab" role="tab" data-tab="suggestions">Suggestions</button>
+        <button class="tab" role="tab" data-tab="customers">Customers</button>
+      </div>
+
+      <div class="topbar-right">
+        <div class="whoami">
+          <span class="whoami-name">Jordan Ellis</span>
+          <span class="whoami-role">Cardiovascular · Northeast</span>
+        </div>
+        <div class="avatar">JE</div>
+      </div>
+    </header>
+
+    <!-- ── Ask FELIX ─────────────────────────────────────────── -->
+    <section class="panel is-active" id="panel-ask">
+
+      <div class="ask-head">
+        <div class="ask-title">
+          <h1>Ask FELIX</h1>
+          <p>Talk to FELIX between calls. Ask about nearby customers, active suggestions, or log a visit.</p>
+        </div>
+        <div class="ask-actions">
+          <button class="ghost-btn" id="btn-voice" aria-pressed="true" title="Toggle FELIX's voice">
+            <svg viewBox="0 0 24 24" class="ico-on"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg>
+            <svg viewBox="0 0 24 24" class="ico-off"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m23 9-6 6M17 9l6 6"/></svg>
+            <span class="ghost-label">Voice on</span>
+          </button>
+          <button class="ghost-btn" id="btn-restart" title="Start the conversation over">
+            <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+            <span class="ghost-label">Restart</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="banner" id="banner" hidden></div>
+
+      <div class="thread" id="thread" aria-live="polite"></div>
+
+      <div class="composer">
+        <div class="chips" id="chips"></div>
+
+        <div class="composer-row">
+          <button class="mic" id="mic" aria-label="Hold to talk to FELIX">
+            <span class="mic-ring r1"></span>
+            <span class="mic-ring r2"></span>
+            <span class="mic-ring r3"></span>
+            <svg viewBox="0 0 24 24" class="mic-ico"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8.5 21h7"/></svg>
+            <svg viewBox="0 0 24 24" class="stop-ico"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
+          </button>
+
+          <form class="input-wrap" id="form" autocomplete="off">
+            <input id="input" type="text" placeholder="Tap the mic and speak — or type your question…" aria-label="Message FELIX" />
+            <button class="send" type="submit" aria-label="Send">
+              <svg viewBox="0 0 24 24"><path d="m4 20 16-8L4 4v6l10 2-10 2v6z"/></svg>
+            </button>
+          </form>
+        </div>
+
+        <div class="status" id="status">
+          <span class="status-dot"></span>
+          <span class="status-text">Tap the mic to start — try “Hey FELIX, I wrapped up early with Dr. Yuki…”</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── My Day ────────────────────────────────────────────── -->
+    <section class="panel" id="panel-my-day">
+      <div class="ask-head"><div class="ask-title">
+        <h1>My Day</h1><p>Tuesday, September 8 · Bayview &amp; Northgate territory loop</p>
+      </div></div>
+      <ol class="day">
+        <li class="day-item is-done">
+          <span class="day-time">9:30</span>
+          <div class="day-body"><strong>Dr. Marcus Bell</strong> — Northgate Cardiovascular, Suite 120
+            <span class="day-note">Completed · call note synced</span></div>
+        </li>
+        <li class="day-item is-done">
+          <span class="day-time">1:52</span>
+          <div class="day-body"><strong>Dr. Hana Yuki</strong> — Bayview Medical Plaza, Suite 310
+            <span class="day-note">Ended 2:14 · call note not yet logged</span></div>
+        </li>
+        <li class="day-item is-now">
+          <span class="day-time">2:18</span>
+          <div class="day-body"><strong>Open window</strong> — 47 minutes free
+            <span class="day-note">2 nearby HCPs with active suggestions · ask FELIX</span></div>
+        </li>
+        <li class="day-item">
+          <span class="day-time">3:30</span>
+          <div class="day-body"><strong>Dr. Elena Sandoval</strong> — Northgate Cardiovascular, Suite 415
+            <span class="day-note">Confirmed · 18 min drive from Bayview</span></div>
+        </li>
+        <li class="day-item">
+          <span class="day-time">4:30</span>
+          <div class="day-body"><strong>Territory wrap-up</strong>
+            <span class="day-note">Review pending call notes and sample reconciliations</span></div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ── Suggestions ───────────────────────────────────────── -->
+    <section class="panel" id="panel-suggestions">
+      <div class="ask-head"><div class="ask-title">
+        <h1>Suggestions</h1><p>Active next-best-actions across your territory, refreshed this morning.</p>
+      </div></div>
+      <div class="sugg-list">
+        <article class="sugg"><span class="pri pri-high">High</span>
+          <h3>Share ODYSSEY-3 12-month outcomes with Dr. Amara Chen</h3>
+          <p>Tier A writer, trending down 12% QoQ. New data published Aug 28; last in-person touch was 41 days ago.</p>
+          <span class="sugg-meta">Bayview Medical Plaza · Suite 402 · expires in 6 days</span></article>
+        <article class="sugg"><span class="pri pri-med">Medium</span>
+          <h3>Confirm Meridian Health formulary win with Dr. Ravi Patel</h3>
+          <p>Two sample requests pending. 60% of his panel is Meridian-covered; the win is effective Oct 1.</p>
+          <span class="sugg-meta">Bayview Medical Plaza · Suite 210 · expires in 12 days</span></article>
+        <article class="sugg"><span class="pri pri-med">Medium</span>
+          <h3>Follow up on payer coverage question — Dr. Hana Yuki</h3>
+          <p>Raised prior-authorization concerns in her last two visits. Payer one-pager approved Sept 2.</p>
+          <span class="sugg-meta">Bayview Medical Plaza · Suite 310 · expires in 9 days</span></article>
+        <article class="sugg"><span class="pri pri-low">Low</span>
+          <h3>Invite Dr. Elena Sandoval to the Oct 14 regional speaker program</h3>
+          <p>Attended two of the last three programs. Seats close Sept 26.</p>
+          <span class="sugg-meta">Northgate Cardiovascular · Suite 415 · expires in 21 days</span></article>
+      </div>
+    </section>
+
+    <!-- ── Customers ─────────────────────────────────────────── -->
+    <section class="panel" id="panel-customers">
+      <div class="ask-head"><div class="ask-title">
+        <h1>Customers</h1><p>HCPs in the Bayview and Northgate buildings.</p>
+      </div></div>
+      <div class="cust-list">
+        <article class="cust"><div class="cust-av">AC</div><div>
+          <strong>Dr. Amara Chen</strong><span>Interventional Cardiology · Tier A</span>
+          <span class="cust-loc">Bayview Medical Plaza · Suite 402</span></div>
+          <span class="pri pri-high">1 suggestion</span></article>
+        <article class="cust"><div class="cust-av">RP</div><div>
+          <strong>Dr. Ravi Patel</strong><span>Internal Medicine · Tier B</span>
+          <span class="cust-loc">Bayview Medical Plaza · Suite 210</span></div>
+          <span class="pri pri-med">1 suggestion</span></article>
+        <article class="cust"><div class="cust-av">HY</div><div>
+          <strong>Dr. Hana Yuki</strong><span>Cardiology · Tier A</span>
+          <span class="cust-loc">Bayview Medical Plaza · Suite 310</span></div>
+          <span class="pri pri-med">1 suggestion</span></article>
+        <article class="cust"><div class="cust-av">ES</div><div>
+          <strong>Dr. Elena Sandoval</strong><span>Electrophysiology · Tier A</span>
+          <span class="cust-loc">Northgate Cardiovascular · Suite 415</span></div>
+          <span class="pri pri-low">1 suggestion</span></article>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* ============================================================================
+ * FELIX — predefined conversation script
+ * ----------------------------------------------------------------------------
+ * This file is the whole "brain" of the Ask FELIX voice agent. There is no
+ * model call: each turn is matched against the nodes below by keyword score,
+ * and the winning node supplies what FELIX says (`speech`), what is written in
+ * the thread (`text`), and the rich cards rendered underneath it (`blocks`).
+ *
+ * To change the demo, edit this file only — app.js never needs to know the
+ * script.
+ *
+ * NODE SHAPE
+ *   id       unique string
+ *   keywords [{ w: weight, any: [...phrases] }]  — a phrase hit adds `w`
+ *   after    [nodeIds]  — score is boosted when it directly follows one of these
+ *   only     [nodeIds]  — node can ONLY match right after one of these turns
+ *   text     what appears in the transcript bubble
+ *   speech   what is spoken aloud (defaults to `text` with markup stripped)
+ *   blocks   rich cards, see BLOCK TYPES below
+ *   chips    suggested follow-up utterances shown after the turn
+ *
+ * BLOCK TYPES
+ *   hcp        { name, initials, specialty, tier, location, walk, priority,
+ *                suggestion, reason, meta:[{label,value}], tags:[] }
+ *   panel      { title, items:[string] }        — bullet list
+ *   kv         { title, rows:[[label, value]] } — key/value table
+ *   slots      { title, options:[{time, label, status}] }
+ *   checklist  { title, items:[string] }
+ *   note       { title, body }                  — draft call note
+ *   callout    { tone: 'info'|'warn'|'good', text }
+ * ==========================================================================*/
+
+const FELIX_SCRIPT = {
+
+  /* Spoken/shown when the tab loads or after Restart. */
+  greeting: {
+    id: 'greeting',
+    text: "Hi Jordan. You're at Bayview Medical Plaza and your next confirmed call isn't until 3:30. Say “Hey FELIX” whenever you're ready.",
+    chips: [
+      'Hey FELIX, I wrapped up early with Dr. Yuki, who else is in the same building with an active suggestion?',
+      "What's left on my day?"
+    ]
+  },
+
+  nodes: [
+
+    /* ── 1. The opening line from the script ──────────────────────────── */
+    {
+      id: 'nearby',
+      keywords: [
+        { w: 3, any: ['same building', 'in the building', 'this building', 'who else', 'anyone else', 'nearby', 'near me', 'close by'] },
+        { w: 2, any: ['active suggestion', 'suggestions', 'suggestion'] },
+        { w: 2, any: ['wrapped up', 'wrapped', 'finished early', 'wrapping up', 'done early', 'ended early', 'got out early'] },
+        { w: 1, any: ['yuki', 'hey felix', 'free time', 'time to kill', 'extra time'] }
+      ],
+      text: "Nice — finishing early with Dr. Yuki frees up **47 minutes** before your 3:30 at Northgate. Two HCPs in this building have active suggestions right now.",
+      speech: "Nice — finishing early with Doctor Yuki frees up 47 minutes before your 3:30 at Northgate. Two H C Ps in this building have active suggestions right now. Doctor Amara Chen in Suite 402, high priority, and Doctor Ravi Patel in Suite 210, medium. Chen is the stronger use of the window — want the detail?",
+      blocks: [
+        {
+          type: 'hcp',
+          name: 'Dr. Amara Chen', initials: 'AC',
+          specialty: 'Interventional Cardiology', tier: 'Tier A',
+          location: 'Suite 402 · two floors up', walk: '3 min walk',
+          priority: 'high',
+          suggestion: 'Share the ODYSSEY-3 12-month outcomes',
+          reason: 'New data published Aug 28. Tier A writer, trending down 12% quarter over quarter.',
+          meta: [
+            { label: 'Last touch', value: '41 days ago, in person' },
+            { label: 'Preferred channel', value: 'In person, mornings' },
+            { label: 'Suggestion expires', value: 'In 6 days' }
+          ],
+          tags: ['Open to reps today', 'Speaker program alum']
+        },
+        {
+          type: 'hcp',
+          name: 'Dr. Ravi Patel', initials: 'RP',
+          specialty: 'Internal Medicine', tier: 'Tier B',
+          location: 'Suite 210 · ground floor', walk: '2 min walk',
+          priority: 'medium',
+          suggestion: 'Confirm the Meridian Health formulary win',
+          reason: 'Effective Oct 1, and 60% of his panel is Meridian-covered.',
+          meta: [
+            { label: 'Last touch', value: '12 days ago, email' },
+            { label: 'Open items', value: '2 sample requests pending' },
+            { label: 'Suggestion expires', value: 'In 12 days' }
+          ],
+          tags: ['Sample requests pending']
+        },
+        {
+          type: 'callout', tone: 'info',
+          text: 'Dr. Chen is the stronger use of the window — she has the tighter expiry and the bigger drop in share.'
+        }
+      ],
+      chips: [
+        'Tell me more about Dr. Chen',
+        'Is she free right now?',
+        'Why is Dr. Patel only medium?'
+      ]
+    },
+
+    /* ── 2. Detail on Dr. Chen ────────────────────────────────────────── */
+    {
+      id: 'chen_detail',
+      keywords: [
+        { w: 3, any: ['chen', 'amara'] },
+        { w: 2, any: ['tell me more', 'more about', 'details', 'brief me', 'background', 'why her', "what's the suggestion", 'what is the suggestion'] },
+        { w: 1, any: ['first one', 'the cardiologist', 'suite 402'] }
+      ],
+      after: ['nearby'],
+      text: "Here's the full picture on Dr. Chen.",
+      speech: "Here's the full picture on Doctor Chen. She's a Tier A interventional cardiologist. Her share dropped twelve percent last quarter, mostly to a competitor's once-daily option, and the ODYSSEY-3 twelve-month data published on August 28th answers her main objection. Lead with the durability curve, then the elderly subgroup — she's asked about it twice. One compliance note: the pediatric indication is not approved, so keep off it.",
+      blocks: [
+        {
+          type: 'kv',
+          title: 'Dr. Amara Chen · Suite 402',
+          rows: [
+            ['Specialty', 'Interventional Cardiology · Tier A'],
+            ['Affiliation', 'Bayview Cardiac Institute'],
+            ['Share trend', '▼ 12% QoQ — shifting to a once-daily competitor'],
+            ['Last 3 touches', 'Jul 29 in person · Jun 12 email · May 30 in person'],
+            ['Open request', 'Asked twice for elderly subgroup data']
+          ]
+        },
+        {
+          type: 'panel',
+          title: 'Talking points, in order',
+          items: [
+            'Open on the ODYSSEY-3 12-month durability curve — it directly answers the once-daily objection she raised in July.',
+            'Then the elderly subgroup analysis she has now asked for twice.',
+            'Close by confirming her preferred sample quantity before the Oct 1 formulary change.'
+          ]
+        },
+        {
+          type: 'checklist',
+          title: 'Approved materials, ready on your tablet',
+          items: [
+            'ODYSSEY-3 12-month outcomes deck — approved Sept 2',
+            'Elderly subgroup one-pager — approved Sept 2',
+            'Prescribing information — current version'
+          ]
+        },
+        {
+          type: 'callout', tone: 'warn',
+          text: 'Compliance: the pediatric indication is not approved. Keep the discussion on-label, and log any adverse event within 24 hours.'
+        }
+      ],
+      chips: [
+        'Is she free right now?',
+        'What should I open with?',
+        'What about Dr. Patel?'
+      ]
+    },
+
+    /* ── 3. Availability ──────────────────────────────────────────────── */
+    {
+      id: 'chen_availability',
+      keywords: [
+        { w: 3, any: ['free right now', 'is she free', 'is she available', 'available now', 'can i see her', 'can i drop in', 'see her now', 'walk in', 'is he free', 'office hours', 'right now'] },
+        { w: 1, any: ['now', 'today', 'time'] }
+      ],
+      after: ['nearby', 'chen_detail'],
+      text: "Her office keeps Tuesday afternoons open for reps, and Dana — her scheduler — has a 20-minute slot at 2:40. It's 2:18 now, so you'd get there with time to spare.",
+      speech: "Her office keeps Tuesday afternoons open for reps, and Dana, her scheduler, has a twenty minute slot at 2:40. It's 2:18 now, so you'd get there with time to spare. That still leaves you a comfortable eighteen minute drive to Northgate. Want me to request it?",
+      blocks: [
+        {
+          type: 'slots',
+          title: 'Dr. Chen · rep access window, today',
+          options: [
+            { time: '2:40 pm', label: '20 minutes · Suite 402', status: 'open' },
+            { time: '3:05 pm', label: '15 minutes · would make Northgate tight', status: 'tight' },
+            { time: '4:00 pm', label: 'Window closes', status: 'closed' }
+          ]
+        },
+        {
+          type: 'callout', tone: 'good',
+          text: 'A 2:40 visit still leaves an 18-minute drive to Northgate with 12 minutes of buffer.'
+        }
+      ],
+      chips: [
+        'Yes, book the 2:40',
+        'Try a different time',
+        'No, go see Dr. Patel instead'
+      ]
+    },
+
+    /* ── 4. Booking confirmation ──────────────────────────────────────── */
+    {
+      id: 'book',
+      keywords: [
+        { w: 3, any: ['book it', 'book the', 'yes book', 'lock it in', 'set it up', 'request it', 'schedule it', 'put it on my calendar', 'add it to my schedule', 'go ahead', "let's do it", 'do it'] },
+        { w: 2, any: ['yes', 'yeah', 'yep', 'sure', 'please'] }
+      ],
+      only: ['chen_availability', 'alt_time'],
+      text: "Done — 2:40 pm with Dr. Chen is requested and your route is updated.",
+      speech: "Done. I've requested 2:40 with Doctor Chen's office and pinned Suite 402 to your route. The ODYSSEY-3 deck and the elderly subgroup one-pager are queued on your tablet. I'll nudge you at 2:35, and I'm holding Doctor Patel as a backup in case the visit runs short.",
+      blocks: [
+        {
+          type: 'checklist',
+          title: 'Handled for you',
+          items: [
+            '2:40 pm request sent to Dana at Suite 402 — confirmation usually lands within 5 minutes',
+            'Suite 402 pinned to your route; Northgate arrival re-estimated at 3:22',
+            'ODYSSEY-3 deck and elderly subgroup one-pager queued on your tablet',
+            'Reminder set for 2:35',
+            'Dr. Patel held as a backup if the visit runs short'
+          ]
+        }
+      ],
+      chips: [
+        'Log my call with Dr. Yuki',
+        'What should I open with?',
+        "What's after this?"
+      ]
+    },
+
+    /* ── 4b. Different time ───────────────────────────────────────────── */
+    {
+      id: 'alt_time',
+      keywords: [
+        { w: 3, any: ['different time', 'another time', 'later', 'something else', 'other options', 'not then'] }
+      ],
+      only: ['chen_availability'],
+      text: "The 3:05 slot is the only other one today, and it puts your Northgate arrival at 3:41 — eleven minutes late. Tomorrow she has 11:15 am open, which fits your Bayview loop cleanly.",
+      speech: "The 3:05 slot is the only other one today, and it puts your Northgate arrival at 3:41 — eleven minutes late. Tomorrow she has 11:15 in the morning open, which fits your Bayview loop cleanly. My recommendation is still the 2:40 today. Which would you like?",
+      blocks: [
+        {
+          type: 'slots',
+          title: 'Alternatives',
+          options: [
+            { time: 'Today 3:05 pm', label: 'Arrives at Northgate 3:41 — 11 min late', status: 'tight' },
+            { time: 'Tomorrow 11:15 am', label: '30 minutes · fits your Bayview loop', status: 'open' }
+          ]
+        }
+      ],
+      chips: ['Book the 2:40 today after all', 'Take tomorrow at 11:15', 'Go see Dr. Patel instead']
+    },
+
+    /* ── 5. Dr. Patel ─────────────────────────────────────────────────── */
+    {
+      id: 'patel',
+      keywords: [
+        { w: 3, any: ['patel', 'ravi'] },
+        { w: 2, any: ['only medium', 'why medium', 'the other one', 'second one', 'internal medicine', 'suite 210', 'instead'] }
+      ],
+      text: "Dr. Patel scores medium because his suggestion doesn't bite until the formulary change lands on Oct 1 — there's no urgency this week, and email has worked well with him.",
+      speech: "Doctor Patel scores medium because his suggestion doesn't bite until the formulary change lands on October first. There's no urgency this week, and email has worked well with him — he replied to the last two. If you have ten minutes after Doctor Chen, the highest-value thing is confirming his sample quantities in person. Otherwise I can draft the email.",
+      blocks: [
+        {
+          type: 'kv',
+          title: 'Dr. Ravi Patel · Suite 210',
+          rows: [
+            ['Specialty', 'Internal Medicine · Tier B'],
+            ['Panel', '~60% Meridian Health covered'],
+            ['Open items', '2 sample requests, submitted Aug 27'],
+            ['Channel', 'Email — replied to the last 2'],
+            ['Why medium', 'No urgency until the Oct 1 formulary effective date']
+          ]
+        },
+        {
+          type: 'panel',
+          title: 'If you do stop by',
+          items: [
+            'Confirm sample quantities before Oct 1 so the first covered scripts are easy.',
+            'Leave the Meridian coverage summary — approved Sept 2.',
+            'Ten minutes is enough; he rarely runs long.'
+          ]
+        }
+      ],
+      chips: ['Draft the email to Dr. Patel', 'Back to Dr. Chen', "What's after this?"]
+    },
+
+    {
+      id: 'patel_email',
+      keywords: [{ w: 3, any: ['draft the email', 'send him an email', 'write the email', 'email him', 'draft an email'] }],
+      after: ['patel'],
+      text: "Drafted. It's sitting in your outbox for review — nothing sends until you approve it.",
+      speech: "Drafted. It's in your outbox for review — nothing sends until you approve it.",
+      blocks: [
+        {
+          type: 'note',
+          title: 'Draft · to Dr. Ravi Patel — awaiting your approval',
+          body: "Subject: Meridian Health coverage, effective October 1\n\nDr. Patel,\n\nQuick note ahead of October 1: Meridian Health has added our therapy to the preferred tier, which covers roughly 60% of your panel.\n\nI've attached the approved coverage summary. Your two sample requests from August 27 are still open — reply with the quantities you'd like and I'll have them to your office before the effective date.\n\nHappy to stop by Suite 210 if that's easier.\n\n— Jordan Ellis"
+        },
+        { type: 'callout', tone: 'info', text: 'Attachment: Meridian coverage summary — approved Sept 2.' }
+      ],
+      chips: ['Back to Dr. Chen', 'Log my call with Dr. Yuki', "That's all for now"]
+    },
+
+    /* ── 6. Logging the Yuki call ─────────────────────────────────────── */
+    {
+      id: 'log_start',
+      keywords: [
+        { w: 3, any: ['log my call', 'log the call', 'log my visit', 'write up', 'call note', 'log yuki', 'log it'] },
+        { w: 1, any: ['yuki', 'log'] }
+      ],
+      text: "Ready. Your calendar has Dr. Yuki from 1:52 to 2:14 — 22 minutes, in person, Suite 310. Tell me how it went and I'll draft the note for your review.",
+      speech: "Ready. Your calendar has Doctor Yuki from 1:52 to 2:14 — twenty two minutes, in person, Suite 310. Tell me how it went and I'll draft the note for your review before anything reaches the C R M.",
+      blocks: [
+        {
+          type: 'kv',
+          title: 'Pre-filled from your calendar',
+          rows: [
+            ['HCP', 'Dr. Hana Yuki · Cardiology · Tier A'],
+            ['When', 'Today, 1:52 – 2:14 pm (22 min)'],
+            ['Where', 'Bayview Medical Plaza, Suite 310'],
+            ['Type', 'In-person detail'],
+            ['Samples', 'None recorded — say so if that changed']
+          ]
+        }
+      ],
+      chips: [
+        'She’s interested but wants payer data',
+        'It went well, she asked about prior authorization',
+        'Cancel the note'
+      ]
+    },
+
+    {
+      id: 'log_outcome',
+      keywords: [
+        { w: 3, any: ['payer data', 'prior authorization', 'prior auth', 'went well', 'interested', 'she asked', 'coverage question', 'it was good', 'positive'] }
+      ],
+      only: ['log_start'],
+      text: "Got it. Here's the draft — read it back and I'll file it, or tell me what to change.",
+      speech: "Got it. Here's the draft. Read it over, and I'll file it when you say so. I also spotted a follow-up: the payer one-pager was approved on September second, so I've queued a suggestion to send it to her tomorrow morning.",
+      blocks: [
+        {
+          type: 'note',
+          title: 'Draft call note · Dr. Hana Yuki · Sept 8, 1:52–2:14 pm',
+          body: "In-person detail, Bayview Suite 310, 22 minutes.\n\nDiscussed current efficacy data. Dr. Yuki is receptive to the therapy but raised prior-authorization burden as her main barrier — reports two recent denials that were later overturned on appeal.\n\nRequested payer coverage detail for Meridian Health and Cascade Blue.\n\nNo samples left. No adverse events reported.\n\nNext step: send the approved payer coverage one-pager and follow up within one week."
+        },
+        {
+          type: 'checklist',
+          title: 'Follow-ups I queued',
+          items: [
+            'Send the payer coverage one-pager (approved Sept 2) — tomorrow, 8:00 am',
+            'New suggestion created: “Follow up on payer coverage — Dr. Yuki”, expires in 9 days'
+          ]
+        },
+        { type: 'callout', tone: 'info', text: 'Nothing is written to the CRM until you say “file it”.' }
+      ],
+      chips: ['File it', 'Change the next step', "What's after this?"]
+    },
+
+    {
+      id: 'log_file',
+      keywords: [{ w: 3, any: ['file it', 'save it', 'submit it', 'send it to crm', 'looks good', 'thats right', "that's right", 'approve it'] }],
+      only: ['log_outcome'],
+      text: "Filed. The note is in the CRM against today's visit and the follow-up is on tomorrow's list.",
+      speech: "Filed. The note is in the C R M against today's visit, and the follow-up is on tomorrow's list. That clears your only outstanding write-up for the day.",
+      blocks: [{ type: 'callout', tone: 'good', text: 'Call note synced · 2:21 pm · no outstanding write-ups today.' }],
+      chips: ['What’s after this?', "That's all for now"]
+    },
+
+    /* ── 7. Opener / coaching ─────────────────────────────────────────── */
+    {
+      id: 'opener',
+      keywords: [
+        { w: 3, any: ['what should i open with', 'how should i open', 'opening line', 'what do i say', 'how do i start', 'first thing i say', 'what should i lead with', 'lead with'] }
+      ],
+      text: "Keep it short and tie it to what she asked you for last time.",
+      speech: "Keep it short and tie it straight to what she asked you for last time. Something like: Doctor Chen, last time you wanted to see whether the effect held past six months. The twelve month ODYSSEY-3 data came out ten days ago, and I brought the elderly subgroup you asked about twice. Two minutes? That names her objection, gives her the new fact, and asks for a small commitment.",
+      blocks: [
+        {
+          type: 'note',
+          title: 'Suggested opener',
+          body: "“Dr. Chen — last time you wanted to know whether the effect held past six months. The 12-month ODYSSEY-3 data published ten days ago, and I brought the elderly subgroup you've asked about twice. Two minutes?”"
+        },
+        {
+          type: 'panel',
+          title: 'Why it works',
+          items: [
+            'Names her own objection back to her, so it does not sound like a generic detail.',
+            'Leads with the new fact, which is the only reason this visit is worth her time.',
+            'Asks for a small, easy commitment rather than an open-ended meeting.'
+          ]
+        }
+      ],
+      chips: ['Is she free right now?', 'What should I leave behind?', "What's after this?"]
+    },
+
+    {
+      id: 'leave_behind',
+      keywords: [
+        { w: 3, any: ['leave behind', 'what content', 'what materials', 'what should i bring', 'what do i bring', 'which deck'] }
+      ],
+      text: "Two pieces, both approved and already on your tablet.",
+      speech: "Two pieces, both approved and already on your tablet. The ODYSSEY-3 twelve month outcomes deck, and the elderly subgroup one-pager. Leave the one-pager — it's the thing she actually asked for. Current prescribing information goes with either.",
+      blocks: [
+        {
+          type: 'checklist',
+          title: 'Approved for use today',
+          items: [
+            'ODYSSEY-3 12-month outcomes deck — approved Sept 2 — present on screen',
+            'Elderly subgroup one-pager — approved Sept 2 — leave behind',
+            'Prescribing information — current version — required with either piece'
+          ]
+        },
+        { type: 'callout', tone: 'warn', text: 'The older 6-month deck is retired as of Sept 2. I removed it from your tablet.' }
+      ],
+      chips: ['Is she free right now?', 'What should I open with?', "What's after this?"]
+    },
+
+    /* ── 8. Schedule / wrap ───────────────────────────────────────────── */
+    {
+      id: 'whats_next',
+      keywords: [
+        { w: 3, any: ["what's after this", 'what is after this', "what's next", 'what is next', 'rest of my day', 'my day', 'my schedule', 'what else today', "what's left", 'after that'] }
+      ],
+      text: "After Bayview you're clear until 3:30.",
+      speech: "After Bayview you're clear until 3:30, when you're with Doctor Elena Sandoval at Northgate Cardiovascular, Suite 415 — eighteen minutes by car. She's confirmed. Then territory wrap-up at 4:30. The only thing outstanding is the Doctor Yuki call note.",
+      blocks: [
+        {
+          type: 'kv',
+          title: 'Remaining today',
+          rows: [
+            ['2:40 pm', 'Dr. Amara Chen — Bayview, Suite 402 (requested)'],
+            ['3:30 pm', 'Dr. Elena Sandoval — Northgate, Suite 415 (confirmed, 18 min drive)'],
+            ['4:30 pm', 'Territory wrap-up'],
+            ['Outstanding', 'Dr. Yuki call note not yet logged']
+          ]
+        }
+      ],
+      chips: ['Log my call with Dr. Yuki', 'Brief me on Dr. Sandoval', "That's all for now"]
+    },
+
+    {
+      id: 'sandoval',
+      keywords: [{ w: 3, any: ['sandoval', 'elena', '3:30', 'northgate'] }],
+      text: "Dr. Sandoval, 3:30 at Northgate Suite 415 — electrophysiology, Tier A, and a reliable speaker.",
+      speech: "Doctor Sandoval, 3:30 at Northgate Suite 415. Electrophysiology, Tier A, and a reliable speaker — she's done two of the last three regional programs. Her open suggestion is the invitation to the October 14th program; seats close September 26th. Last touch was three weeks ago and it was positive.",
+      blocks: [
+        {
+          type: 'kv',
+          title: 'Dr. Elena Sandoval · Northgate Suite 415',
+          rows: [
+            ['Specialty', 'Electrophysiology · Tier A'],
+            ['Open suggestion', 'Invite to the Oct 14 regional speaker program'],
+            ['Deadline', 'Seats close Sept 26'],
+            ['Last touch', '3 weeks ago, in person — positive']
+          ]
+        }
+      ],
+      chips: ['Log my call with Dr. Yuki', "That's all for now"]
+    },
+
+    {
+      id: 'wrap',
+      keywords: [
+        { w: 3, any: ["that's all", 'thats all', 'thank you', 'thanks felix', 'thanks', 'nothing else', "i'm good", 'im good', 'goodbye', 'bye', 'done for now'] }
+      ],
+      text: "You're set. I'll nudge you at 2:35 for Suite 402.",
+      speech: "You're set. I'll nudge you at 2:35 for Suite 402, and again when it's time to leave for Northgate. Go get it, Jordan.",
+      blocks: [],
+      chips: ['Hey FELIX, I wrapped up early with Dr. Yuki, who else is in the same building with an active suggestion?']
+    },
+
+    /* ── Utility intents ──────────────────────────────────────────────── */
+    {
+      id: 'who_is_yuki',
+      keywords: [{ w: 3, any: ['who is dr yuki', 'who is yuki', 'about yuki', 'tell me about yuki'] }],
+      text: "Dr. Hana Yuki — Cardiology, Tier A, Suite 310 in this building. You just left her at 2:14.",
+      speech: "Doctor Hana Yuki — Cardiology, Tier A, Suite 310 in this building. You just left her at 2:14, a twenty two minute in-person detail. Her call note is still unlogged, if you want to do it while it's fresh.",
+      blocks: [],
+      chips: ['Log my call with Dr. Yuki', 'Who else is nearby?']
+    },
+
+    {
+      id: 'help',
+      keywords: [{ w: 3, any: ['what can you do', 'help', 'how does this work', 'what can i ask'] }],
+      text: "I'm built for the gaps between calls. Ask me things like:",
+      speech: "I'm built for the gaps between calls. Ask me who's nearby with an active suggestion, brief me on a customer before you walk in, check whether someone can see you now, or log a call and I'll draft the note.",
+      blocks: [{
+        type: 'panel',
+        title: 'Try asking',
+        items: [
+          '“Who else is in the same building with an active suggestion?”',
+          '“Tell me more about Dr. Chen.”',
+          '“Is she free right now?”',
+          '“Log my call with Dr. Yuki.”',
+          '“What’s after this?”'
+        ]
+      }],
+      chips: ['Hey FELIX, I wrapped up early with Dr. Yuki, who else is in the same building with an active suggestion?']
+    }
+  ],
+
+  /* Rotating replies when nothing scores high enough. */
+  fallbacks: [
+    {
+      text: "I didn't catch that one. I can find nearby customers with active suggestions, brief you on an HCP, check availability, or log a call.",
+      speech: "I didn't catch that one. I can find nearby customers with active suggestions, brief you on an H C P, check availability, or log a call.",
+      chips: ['Who else is nearby with a suggestion?', 'Tell me more about Dr. Chen', 'What can you do?']
+    },
+    {
+      text: "Still not sure what you're after — try one of these, or ask “what can you do?”",
+      speech: "Still not sure what you're after. Try one of these, or ask what can you do.",
+      chips: ['Is she free right now?', 'Log my call with Dr. Yuki', "What's after this?"]
+    }
+  ]
+};
+
+window.FELIX_SCRIPT = FELIX_SCRIPT;
+
+</script>
+<script>
+/* ============================================================================
+ * FELIX — Ask FELIX voice agent
+ * ----------------------------------------------------------------------------
+ * No backend, no API keys. Listening is the Web Speech API's SpeechRecognition,
+ * the voice is speechSynthesis, and the conversation itself comes from
+ * assets/script-data.js.
+ * ==========================================================================*/
+(function () {
+  'use strict';
+
+  const SCRIPT = window.FELIX_SCRIPT;
+
+  const el = {
+    thread:   document.getElementById('thread'),
+    chips:    document.getElementById('chips'),
+    form:     document.getElementById('form'),
+    input:    document.getElementById('input'),
+    mic:      document.getElementById('mic'),
+    status:   document.getElementById('status'),
+    banner:   document.getElementById('banner'),
+    btnVoice: document.getElementById('btn-voice'),
+    btnReset: document.getElementById('btn-restart')
+  };
+
+  const state = {
+    lastNodeId: null,
+    voiceOn: true,
+    listening: false,
+    speaking: false,
+    fallbackIndex: 0,
+    busy: false
+  };
+
+  /* ── Tabs ───────────────────────────────────────────────────────────── */
+
+  function showTab(name) {
+    document.querySelectorAll('.tab').forEach(t =>
+      t.classList.toggle('is-active', t.dataset.tab === name));
+    document.querySelectorAll('.rail-btn').forEach(b =>
+      b.classList.toggle('is-active', b.dataset.tab === name));
+    document.querySelectorAll('.panel').forEach(p =>
+      p.classList.toggle('is-active', p.id === 'panel-' + name));
+  }
+
+  document.querySelectorAll('[data-tab]').forEach(btn =>
+    btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+
+  /* ── Rendering ──────────────────────────────────────────────────────── */
+
+  const esc = s => String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  /* **bold** only — everything else is escaped first. */
+  const rich = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+  function blockHTML(b) {
+    switch (b.type) {
+
+      case 'hcp':
+        return `
+          <article class="card hcp lvl-${esc(b.priority)}">
+            <header class="hcp-head">
+              <div class="hcp-av">${esc(b.initials || '')}</div>
+              <div class="hcp-id">
+                <h4>${esc(b.name)}</h4>
+                <p>${esc(b.specialty)}${b.tier ? ' · ' + esc(b.tier) : ''}</p>
+              </div>
+              <span class="pri pri-${esc(b.priority)}">${esc(b.priority)}</span>
+            </header>
+            <div class="hcp-where">
+              <svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
+              <span>${esc(b.location)}</span>
+              ${b.walk ? `<span class="dot">•</span><span>${esc(b.walk)}</span>` : ''}
+            </div>
+            <div class="hcp-sugg">
+              <span class="hcp-sugg-label">Active suggestion</span>
+              <p class="hcp-sugg-title">${esc(b.suggestion)}</p>
+              <p class="hcp-sugg-why">${esc(b.reason)}</p>
+            </div>
+            ${(b.meta || []).length ? `<dl class="hcp-meta">${b.meta.map(m =>
+              `<div><dt>${esc(m.label)}</dt><dd>${esc(m.value)}</dd></div>`).join('')}</dl>` : ''}
+            ${(b.tags || []).length ? `<div class="tags">${b.tags.map(t =>
+              `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+          </article>`;
+
+      case 'kv':
+        return `
+          <article class="card">
+            ${b.title ? `<h4 class="card-title">${esc(b.title)}</h4>` : ''}
+            <dl class="kv">${b.rows.map(([k, v]) =>
+              `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+          </article>`;
+
+      case 'panel':
+        return `
+          <article class="card">
+            ${b.title ? `<h4 class="card-title">${esc(b.title)}</h4>` : ''}
+            <ul class="bullets">${b.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>
+          </article>`;
+
+      case 'checklist':
+        return `
+          <article class="card">
+            ${b.title ? `<h4 class="card-title">${esc(b.title)}</h4>` : ''}
+            <ul class="checks">${b.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>
+          </article>`;
+
+      case 'slots':
+        return `
+          <article class="card">
+            ${b.title ? `<h4 class="card-title">${esc(b.title)}</h4>` : ''}
+            <ul class="slots">${b.options.map(o => `
+              <li class="slot slot-${esc(o.status)}">
+                <span class="slot-time">${esc(o.time)}</span>
+                <span class="slot-label">${esc(o.label)}</span>
+                <span class="slot-status">${esc(o.status)}</span>
+              </li>`).join('')}</ul>
+          </article>`;
+
+      case 'note':
+        return `
+          <article class="card note">
+            ${b.title ? `<h4 class="card-title">${esc(b.title)}</h4>` : ''}
+            <pre class="note-body">${esc(b.body)}</pre>
+          </article>`;
+
+      case 'callout':
+        return `<div class="callout callout-${esc(b.tone || 'info')}">${esc(b.text)}</div>`;
+
+      default:
+        return '';
+    }
+  }
+
+  function addMessage(role, text, blocks) {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg msg-' + role;
+    wrap.innerHTML = `
+      <div class="msg-av">${role === 'felix' ? 'F' : 'JE'}</div>
+      <div class="msg-body">
+        <div class="msg-who">${role === 'felix' ? 'FELIX' : 'You'}</div>
+        <div class="bubble"></div>
+        <div class="blocks"></div>
+      </div>`;
+    el.thread.appendChild(wrap);
+
+    const bubble = wrap.querySelector('.bubble');
+    const host   = wrap.querySelector('.blocks');
+
+    if (role === 'felix') {
+      typeInto(bubble, text, () => {
+        host.innerHTML = (blocks || []).map(blockHTML).join('');
+        requestAnimationFrame(() => {
+          host.querySelectorAll('.card, .callout')
+              .forEach((c, i) => setTimeout(() => c.classList.add('in'), i * 70));
+          scrollDown();
+        });
+      });
+    } else {
+      bubble.textContent = text;
+    }
+
+    scrollDown();
+    return wrap;
+  }
+
+  /* Character reveal, so FELIX's text lands roughly with the voice. */
+  function typeInto(node, text, done) {
+    const html = rich(text);
+    const plain = text.replace(/\*\*/g, '');
+    let i = 0;
+    const step = Math.max(1, Math.round(plain.length / 90));
+
+    const tick = setInterval(() => {
+      i += step;
+      if (i >= plain.length) {
+        clearInterval(tick);
+        node.innerHTML = html;
+        if (done) done();
+        scrollDown();
+        return;
+      }
+      node.textContent = plain.slice(0, i);
+      scrollDown();
+    }, 16);
+  }
+
+  function scrollDown() {
+    el.thread.scrollTop = el.thread.scrollHeight;
+  }
+
+  function thinking() {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg msg-felix';
+    wrap.innerHTML = `
+      <div class="msg-av">F</div>
+      <div class="msg-body">
+        <div class="msg-who">FELIX</div>
+        <div class="bubble typing"><i></i><i></i><i></i></div>
+      </div>`;
+    el.thread.appendChild(wrap);
+    scrollDown();
+    return wrap;
+  }
+
+  function renderChips(list) {
+    el.chips.innerHTML = '';
+    (list || []).forEach(text => {
+      const b = document.createElement('button');
+      b.className = 'chip';
+      b.type = 'button';
+      b.textContent = text;
+      b.addEventListener('click', () => send(text));
+      el.chips.appendChild(b);
+    });
+  }
+
+  /* ── Script matching ────────────────────────────────────────────────── */
+
+  const normalize = s => ' ' + String(s).toLowerCase()
+    .replace(/[’']/g, "'")
+    .replace(/[^a-z0-9':\s]/g, ' ')
+    .replace(/\bdoctor\b/g, 'dr')
+    .replace(/\s+/g, ' ')
+    .trim() + ' ';
+
+  function scoreNode(node, text) {
+    if (node.only && !node.only.includes(state.lastNodeId)) return 0;
+
+    let score = 0;
+    (node.keywords || []).forEach(group => {
+      const hit = group.any.some(phrase => text.includes(' ' + normalize(phrase).trim() + ' ')
+        || text.includes(normalize(phrase).trim()));
+      if (hit) score += group.w;
+    });
+
+    if (!score) return 0;
+    if (node.after && node.after.includes(state.lastNodeId)) score += 1.5;
+    if (node.only) score += 2;               // context-gated nodes are strong signals
+    if (node.id === state.lastNodeId) score -= 1.5; // discourage repeating a turn
+    return score;
+  }
+
+  function match(raw) {
+    const text = normalize(raw);
+    let best = null, bestScore = 0;
+
+    SCRIPT.nodes.forEach(node => {
+      const s = scoreNode(node, text);
+      if (s > bestScore) { best = node; bestScore = s; }
+    });
+
+    return bestScore >= 3 ? best : null;
+  }
+
+  /* ── Turn handling ──────────────────────────────────────────────────── */
+
+  function send(text) {
+    const clean = String(text || '').trim();
+    if (!clean || state.busy) return;
+
+    state.busy = true;
+    stopListening();
+    cancelSpeech();
+
+    addMessage('user', clean);
+    el.input.value = '';
+    renderChips([]);
+    setStatus('thinking', 'FELIX is thinking…');
+
+    const ghost = thinking();
+
+    setTimeout(() => {
+      ghost.remove();
+
+      const node = match(clean);
+      let reply;
+
+      if (node) {
+        state.lastNodeId = node.id;
+        state.fallbackIndex = 0;
+        reply = node;
+      } else {
+        reply = SCRIPT.fallbacks[state.fallbackIndex % SCRIPT.fallbacks.length];
+        state.fallbackIndex++;
+      }
+
+      addMessage('felix', reply.text, reply.blocks);
+      renderChips(reply.chips);
+      speak(reply.speech || reply.text.replace(/\*\*/g, ''));
+      state.busy = false;
+    }, 520 + Math.random() * 320);
+  }
+
+  el.form.addEventListener('submit', e => {
+    e.preventDefault();
+    send(el.input.value);
+  });
+
+  /* ── Status line ────────────────────────────────────────────────────── */
+
+  function setStatus(kind, text) {
+    el.status.className = 'status is-' + kind;
+    el.status.querySelector('.status-text').textContent = text;
+  }
+
+  const IDLE_HINT = 'Tap the mic to start — try “Hey FELIX, I wrapped up early with Dr. Yuki…”';
+
+  /* ── Text to speech ─────────────────────────────────────────────────── */
+
+  const tts = window.speechSynthesis;
+  let voice = null;
+
+  function pickVoice() {
+    if (!tts) return;
+    const voices = tts.getVoices();
+    if (!voices.length) return;
+    const prefer = [
+      'Google US English', 'Samantha', 'Microsoft Aria Online (Natural) - English (United States)',
+      'Microsoft Jenny Online (Natural) - English (United States)', 'Karen', 'Moira'
+    ];
+    voice = prefer.map(n => voices.find(v => v.name === n)).find(Boolean)
+         || voices.find(v => /^en[-_]US/i.test(v.lang))
+         || voices.find(v => /^en/i.test(v.lang))
+         || voices[0];
+  }
+
+  if (tts) {
+    pickVoice();
+    tts.addEventListener('voiceschanged', pickVoice);
+  }
+
+  function cancelSpeech() {
+    if (tts && (tts.speaking || tts.pending)) tts.cancel();
+    state.speaking = false;
+    document.body.classList.remove('is-speaking');
+  }
+
+  function speak(text) {
+    if (!tts || !state.voiceOn || !text) {
+      setStatus('idle', IDLE_HINT);
+      return;
+    }
+    cancelSpeech();
+
+    const u = new SpeechSynthesisUtterance(text);
+    if (voice) u.voice = voice;
+    u.rate = 1.03;
+    u.pitch = 1.0;
+    u.lang = (voice && voice.lang) || 'en-US';
+
+    u.onstart = () => {
+      state.speaking = true;
+      document.body.classList.add('is-speaking');
+      setStatus('speaking', 'FELIX is speaking — tap the mic to interrupt');
+    };
+    u.onend = u.onerror = () => {
+      state.speaking = false;
+      document.body.classList.remove('is-speaking');
+      if (!state.listening) setStatus('idle', IDLE_HINT);
+    };
+
+    // Chrome needs a beat after cancel() before the next utterance takes.
+    setTimeout(() => tts.speak(u), 60);
+  }
+
+  /* ── Speech recognition ─────────────────────────────────────────────── */
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recog = null;
+
+  function buildRecognizer() {
+    const r = new SR();
+    r.lang = 'en-US';
+    r.continuous = false;
+    r.interimResults = true;
+    r.maxAlternatives = 1;
+
+    let finalText = '';
+
+    r.onstart = () => {
+      finalText = '';
+      state.listening = true;
+      el.mic.classList.add('is-listening');
+      document.body.classList.add('is-listening');
+      setStatus('listening', 'Listening…');
+    };
+
+    r.onresult = e => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const chunk = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalText += chunk;
+        else interim += chunk;
+      }
+      el.input.value = (finalText + interim).trim();
+    };
+
+    r.onerror = e => {
+      state.listening = false;
+      el.mic.classList.remove('is-listening');
+      document.body.classList.remove('is-listening');
+
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        showBanner('Microphone access is blocked. Allow it in your browser’s site settings, or type your question below — the conversation works either way.');
+        setStatus('idle', 'Mic blocked — type instead');
+      } else if (e.error === 'no-speech') {
+        setStatus('idle', 'Didn’t hear anything — tap the mic and try again');
+      } else {
+        setStatus('idle', IDLE_HINT);
+      }
+    };
+
+    r.onend = () => {
+      state.listening = false;
+      el.mic.classList.remove('is-listening');
+      document.body.classList.remove('is-listening');
+      const said = (finalText || el.input.value).trim();
+      if (said) send(said);
+      else if (!state.speaking && !state.busy) setStatus('idle', IDLE_HINT);
+    };
+
+    return r;
+  }
+
+  function startListening() {
+    if (!SR) {
+      el.input.focus();
+      return;
+    }
+    cancelSpeech();                       // barge-in: talking over FELIX stops him
+    stopMicMeter();
+    try {
+      recog = buildRecognizer();
+      recog.start();
+      startMicMeter();
+    } catch (_) { /* start() throws if already running */ }
+  }
+
+  function stopListening() {
+    stopMicMeter();
+    if (recog && state.listening) {
+      try { recog.stop(); } catch (_) {}
+    }
+  }
+
+  el.mic.addEventListener('click', () => {
+    if (state.listening) stopListening();
+    else if (state.speaking) { cancelSpeech(); setStatus('idle', IDLE_HINT); }
+    else startListening();
+  });
+
+  /* Space bar as push-to-talk, when not typing. */
+  document.addEventListener('keydown', e => {
+    if (e.code !== 'Space' || e.repeat) return;
+    if (document.activeElement === el.input) return;
+    if (!document.getElementById('panel-ask').classList.contains('is-active')) return;
+    e.preventDefault();
+    if (!state.listening) startListening();
+  });
+  document.addEventListener('keyup', e => {
+    if (e.code === 'Space' && state.listening && document.activeElement !== el.input) {
+      e.preventDefault();
+      stopListening();
+    }
+  });
+
+  /* ── Mic level → orb size (best effort; falls back to CSS pulse) ────── */
+
+  let audioCtx = null, micStream = null, meterFrame = null;
+
+  function startMicMeter() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      if (!state.listening) { stream.getTracks().forEach(t => t.stop()); return; }
+      micStream = stream;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      src.connect(analyser);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+
+      (function loop() {
+        if (!state.listening) return;
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) {
+          const v = (data[i] - 128) / 128;
+          sum += v * v;
+        }
+        const level = Math.min(1, Math.sqrt(sum / data.length) * 6);
+        el.mic.style.setProperty('--level', level.toFixed(3));
+        meterFrame = requestAnimationFrame(loop);
+      })();
+    }).catch(() => { /* recognition still works without the meter */ });
+  }
+
+  function stopMicMeter() {
+    if (meterFrame) cancelAnimationFrame(meterFrame);
+    meterFrame = null;
+    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+    if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
+    el.mic.style.setProperty('--level', '0');
+  }
+
+  /* ── Banner ─────────────────────────────────────────────────────────── */
+
+  function showBanner(msg) {
+    el.banner.textContent = msg;
+    el.banner.hidden = false;
+  }
+
+  /* ── Controls ───────────────────────────────────────────────────────── */
+
+  const btnVoice = el.btnVoice;
+  btnVoice.addEventListener('click', () => {
+    state.voiceOn = !state.voiceOn;
+    btnVoice.setAttribute('aria-pressed', String(state.voiceOn));
+    btnVoice.classList.toggle('is-off', !state.voiceOn);
+    btnVoice.querySelector('.ghost-label').textContent = state.voiceOn ? 'Voice on' : 'Voice off';
+    if (!state.voiceOn) cancelSpeech();
+  });
+
+  el.btnReset.addEventListener('click', reset);
+
+  function reset() {
+    stopListening();
+    cancelSpeech();
+    state.lastNodeId = null;
+    state.fallbackIndex = 0;
+    state.busy = false;
+    el.thread.innerHTML = '';
+    el.input.value = '';
+    addMessage('felix', SCRIPT.greeting.text, SCRIPT.greeting.blocks);
+    renderChips(SCRIPT.greeting.chips);
+    setStatus('idle', IDLE_HINT);
+  }
+
+  /* ── Boot ───────────────────────────────────────────────────────────── */
+
+  if (!SR) {
+    showBanner('This browser can’t listen — speech recognition needs Chrome, Edge, or Safari. You can still run the whole conversation by typing or tapping the suggestions below.');
+  }
+  if (!tts) {
+    showBanner('This browser has no speech synthesis, so FELIX will reply in text only.');
+  }
+
+  reset();
+  setStatus('idle', IDLE_HINT);
+})();
+
+</script>
+</body>
+</html>
