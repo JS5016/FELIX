@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FELIX — Ask FELIX</title>
+<meta name="description" content="FELIX field assistant — a voice-driven Ask FELIX experience for pharma field teams." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── Left rail ───────────────────────────────────────────── -->
+  <aside class="rail">
+    <div class="rail-logo" title="FELIX">F</div>
+    <nav class="rail-nav">
+      <button class="rail-btn" data-tab="my-day"      title="My Day">
+        <svg viewBox="0 0 24 24"><path d="M8 2v3M16 2v3M3 9h18M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>
+      </button>
+      <button class="rail-btn is-active" data-tab="ask" title="Ask FELIX">
+        <svg viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 1 4 4v4a4 4 0 0 1-8 0V7a4 4 0 0 1 4-4z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+      <button class="rail-btn" data-tab="suggestions" title="Suggestions">
+        <svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2z"/><path d="M9 21h6"/></svg>
+      </button>
+      <button class="rail-btn" data-tab="customers"   title="Customers">
+        <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+      </button>
+    </nav>
+    <div class="rail-user" title="Jordan Ellis">JE</div>
+  </aside>
+
+  <!-- ── Main ────────────────────────────────────────────────── -->
+  <main class="main">
+
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">FELIX</span>
+        <span class="brand-by">by ZS</span>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button class="tab is-active" role="tab" data-tab="ask">Ask FELIX</button>
+        <button class="tab" role="tab" data-tab="my-day">My Day</button>
+        <button class="tab" role="tab" data-tab="suggestions">Suggestions</button>
+        <button class="tab" role="tab" data-tab="customers">Customers</button>
+      </div>
+
+      <div class="topbar-right">
+        <div class="whoami">
+          <span class="whoami-name">Jordan Ellis</span>
+          <span class="whoami-role">Cardiovascular · Northeast</span>
+        </div>
+        <div class="avatar">JE</div>
+      </div>
+    </header>
+
+    <!-- ── Ask FELIX ─────────────────────────────────────────── -->
+    <section class="panel is-active" id="panel-ask">
+
+      <div class="ask-head">
+        <div class="ask-title">
+          <h1>Ask FELIX</h1>
+          <p>Talk to FELIX between calls. Ask about nearby customers, active suggestions, or log a visit.</p>
+        </div>
+        <div class="ask-actions">
+          <button class="ghost-btn" id="btn-voice" aria-pressed="true" title="Toggle FELIX's voice">
+            <svg viewBox="0 0 24 24" class="ico-on"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg>
+            <svg viewBox="0 0 24 24" class="ico-off"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m23 9-6 6M17 9l6 6"/></svg>
+            <span class="ghost-label">Voice on</span>
+          </button>
+          <button class="ghost-btn" id="btn-restart" title="Start the conversation over">
+            <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+            <span class="ghost-label">Restart</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="banner" id="banner" hidden></div>
+
+      <div class="thread" id="thread" aria-live="polite"></div>
+
+      <div class="composer">
+        <div class="chips" id="chips"></div>
+
+        <div class="composer-row">
+          <button class="mic" id="mic" aria-label="Hold to talk to FELIX">
+            <span class="mic-ring r1"></span>
+            <span class="mic-ring r2"></span>
+            <span class="mic-ring r3"></span>
+            <svg viewBox="0 0 24 24" class="mic-ico"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8.5 21h7"/></svg>
+            <svg viewBox="0 0 24 24" class="stop-ico"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
+          </button>
+
+          <form class="input-wrap" id="form" autocomplete="off">
+            <input id="input" type="text" placeholder="Tap the mic and speak — or type your question…" aria-label="Message FELIX" />
+            <button class="send" type="submit" aria-label="Send">
+              <svg viewBox="0 0 24 24"><path d="m4 20 16-8L4 4v6l10 2-10 2v6z"/></svg>
+            </button>
+          </form>
+        </div>
+
+        <div class="status" id="status">
+          <span class="status-dot"></span>
+          <span class="status-text">Tap the mic to start — try “Hey FELIX, I wrapped up early with Dr. Yuki…”</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── My Day ────────────────────────────────────────────── -->
+    <section class="panel" id="panel-my-day">
+      <div class="ask-head"><div class="ask-title">
+        <h1>My Day</h1><p>Tuesday, September 8 · Bayview &amp; Northgate territory loop</p>
+      </div></div>
+      <ol class="day">
+        <li class="day-item is-done">
+          <span class="day-time">9:30</span>
+          <div class="day-body"><strong>Dr. Marcus Bell</strong> — Northgate Cardiovascular, Suite 120
+            <span class="day-note">Completed · call note synced</span></div>
+        </li>
+        <li class="day-item is-done">
+          <span class="day-time">1:52</span>
+          <div class="day-body"><strong>Dr. Hana Yuki</strong> — Bayview Medical Plaza, Suite 310
+            <span class="day-note">Ended 2:14 · call note not yet logged</span></div>
+        </li>
+        <li class="day-item is-now">
+          <span class="day-time">2:18</span>
+          <div class="day-body"><strong>Open window</strong> — 47 minutes free
+            <span class="day-note">2 nearby HCPs with active suggestions · ask FELIX</span></div>
+        </li>
+        <li class="day-item">
+          <span class="day-time">3:30</span>
+          <div class="day-body"><strong>Dr. Elena Sandoval</strong> — Northgate Cardiovascular, Suite 415
+            <span class="day-note">Confirmed · 18 min drive from Bayview</span></div>
+        </li>
+        <li class="day-item">
+          <span class="day-time">4:30</span>
+          <div class="day-body"><strong>Territory wrap-up</strong>
+            <span class="day-note">Review pending call notes and sample reconciliations</span></div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ── Suggestions ───────────────────────────────────────── -->
+    <section class="panel" id="panel-suggestions">
+      <div class="ask-head"><div class="ask-title">
+        <h1>Suggestions</h1><p>Active next-best-actions across your territory, refreshed this morning.</p>
+      </div></div>
+      <div class="sugg-list">
+        <article class="sugg"><span class="pri pri-high">High</span>
+          <h3>Share ODYSSEY-3 12-month outcomes with Dr. Amara Chen</h3>
+          <p>Tier A writer, trending down 12% QoQ. New data published Aug 28; last in-person touch was 41 days ago.</p>
+          <span class="sugg-meta">Bayview Medical Plaza · Suite 402 · expires in 6 days</span></article>
+        <article class="sugg"><span class="pri pri-med">Medium</span>
+          <h3>Confirm Meridian Health formulary win with Dr. Ravi Patel</h3>
+          <p>Two sample requests pending. 60% of his panel is Meridian-covered; the win is effective Oct 1.</p>
+          <span class="sugg-meta">Bayview Medical Plaza · Suite 210 · expires in 12 days</span></article>
+        <article class="sugg"><span class="pri pri-med">Medium</span>
+          <h3>Follow up on payer coverage question — Dr. Hana Yuki</h3>
+          <p>Raised prior-authorization concerns in her last two visits. Payer one-pager approved Sept 2.</p>
+          <span class="sugg-meta">Bayview Medical Plaza · Suite 310 · expires in 9 days</span></article>
+        <article class="sugg"><span class="pri pri-low">Low</span>
+          <h3>Invite Dr. Elena Sandoval to the Oct 14 regional speaker program</h3>
+          <p>Attended two of the last three programs. Seats close Sept 26.</p>
+          <span class="sugg-meta">Northgate Cardiovascular · Suite 415 · expires in 21 days</span></article>
+      </div>
+    </section>
+
+    <!-- ── Customers ─────────────────────────────────────────── -->
+    <section class="panel" id="panel-customers">
+      <div class="ask-head"><div class="ask-title">
+        <h1>Customers</h1><p>HCPs in the Bayview and Northgate buildings.</p>
+      </div></div>
+      <div class="cust-list">
+        <article class="cust"><div class="cust-av">AC</div><div>
+          <strong>Dr. Amara Chen</strong><span>Interventional Cardiology · Tier A</span>
+          <span class="cust-loc">Bayview Medical Plaza · Suite 402</span></div>
+          <span class="pri pri-high">1 suggestion</span></article>
+        <article class="cust"><div class="cust-av">RP</div><div>
+          <strong>Dr. Ravi Patel</strong><span>Internal Medicine · Tier B</span>
+          <span class="cust-loc">Bayview Medical Plaza · Suite 210</span></div>
+          <span class="pri pri-med">1 suggestion</span></article>
+        <article class="cust"><div class="cust-av">HY</div><div>
+          <strong>Dr. Hana Yuki</strong><span>Cardiology · Tier A</span>
+          <span class="cust-loc">Bayview Medical Plaza · Suite 310</span></div>
+          <span class="pri pri-med">1 suggestion</span></article>
+        <article class="cust"><div class="cust-av">ES</div><div>
+          <strong>Dr. Elena Sandoval</strong><span>Electrophysiology · Tier A</span>
+          <span class="cust-loc">Northgate Cardiovascular · Suite 415</span></div>
+          <span class="pri pri-low">1 suggestion</span></article>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="assets/script-data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
