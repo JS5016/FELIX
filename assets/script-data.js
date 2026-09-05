@@ -1,501 +1,553 @@
 /* ============================================================================
- * FELIX — predefined conversation script
+ * Ask FELIX — predefined conversation script
  * ----------------------------------------------------------------------------
- * This file is the whole "brain" of the Ask FELIX voice agent. There is no
- * model call: each turn is matched against the nodes below by keyword score,
- * and the winning node supplies what FELIX says (`speech`), what is written in
- * the thread (`text`), and the rich cards rendered underneath it (`blocks`).
+ * The whole "brain" of the agent. No model call: each turn is matched against
+ * the nodes below by keyword score, and the winning node supplies what FELIX
+ * says (`speech`), what appears in the transcript (`text`), and the cards
+ * rendered underneath (`blocks`).
  *
- * To change the demo, edit this file only — app.js never needs to know the
- * script.
+ * Edit this file only — app.js never needs to know the script.
  *
  * NODE SHAPE
  *   id       unique string
- *   keywords [{ w: weight, any: [...phrases] }]  — a phrase hit adds `w`
- *   after    [nodeIds]  — score is boosted when it directly follows one of these
- *   only     [nodeIds]  — node can ONLY match right after one of these turns
- *   text     what appears in the transcript bubble
- *   speech   what is spoken aloud (defaults to `text` with markup stripped)
- *   blocks   rich cards, see BLOCK TYPES below
- *   chips    suggested follow-up utterances shown after the turn
+ *   keywords [{ w: weight, any: [...phrases] }] — a phrase hit adds `w`
+ *   after    [nodeIds] — score boosted when it directly follows one of these
+ *   only     [nodeIds] — can ONLY match right after one of these turns
+ *   text     transcript copy
+ *   speech   spoken copy (numbers/abbreviations written out for TTS)
+ *   blocks   rich cards (types documented in app.js blockHTML)
+ *   chips    suggested follow-ups
  *
- * BLOCK TYPES
- *   hcp        { name, initials, specialty, tier, location, walk, priority,
- *                suggestion, reason, meta:[{label,value}], tags:[] }
- *   panel      { title, items:[string] }        — bullet list
- *   kv         { title, rows:[[label, value]] } — key/value table
- *   slots      { title, options:[{time, label, status}] }
- *   checklist  { title, items:[string] }
- *   note       { title, body }                  — draft call note
- *   callout    { tone: 'info'|'warn'|'good', text }
+ * All names, products, and figures are fictional demo data.
  * ==========================================================================*/
 
 const FELIX_SCRIPT = {
 
-  /* Spoken/shown when the tab loads or after Restart. */
-  greeting: {
-    id: 'greeting',
-    text: "Hi Jordan. You're at Bayview Medical Plaza and your next confirmed call isn't until 3:30. Say “Hey FELIX” whenever you're ready.",
-    chips: [
-      'Hey FELIX, I wrapped up early with Dr. Yuki, who else is in the same building with an active suggestion?',
-      "What's left on my day?"
-    ]
+  rep: 'John',
+
+  /* The three pills on the welcome screen. */
+  starters: [
+    'What are my active suggestions for this week?',
+    'Show me the list of customers who I have not contacted in the last 4 weeks?',
+    'Which HCPs have changed behavior recently?'
+  ],
+
+  /* Spoken when a live voice call connects. */
+  callGreeting: {
+    text: "Hi John, FELIX here. You're at University Rehabilitation Center in Fort Worth. What do you need?",
+    speech: "Hi John, FELIX here. You're at University Rehabilitation Center in Fort Worth. What do you need?"
   },
 
   nodes: [
 
-    /* ── 1. The opening line from the script ──────────────────────────── */
+    /* ── The line from the brief ──────────────────────────────────── */
     {
       id: 'nearby',
       keywords: [
-        { w: 3, any: ['same building', 'in the building', 'this building', 'who else', 'anyone else', 'nearby', 'near me', 'close by'] },
+        { w: 3, any: ['same building', 'in the building', 'this building', 'who else', 'anyone else', 'nearby', 'near me', 'close by', 'around her office', 'around the office'] },
         { w: 2, any: ['active suggestion', 'suggestions', 'suggestion'] },
-        { w: 2, any: ['wrapped up', 'wrapped', 'finished early', 'wrapping up', 'done early', 'ended early', 'got out early'] },
-        { w: 1, any: ['yuki', 'hey felix', 'free time', 'time to kill', 'extra time'] }
+        { w: 2, any: ['wrapped up', 'wrapped', 'finished early', 'wrapping up', 'done early', 'ended early', 'got out early', 'ran short'] },
+        { w: 1, any: ['yuki', 'watanabe', 'hey felix', 'free time', 'extra time'] }
       ],
-      text: "Nice — finishing early with Dr. Yuki frees up **47 minutes** before your 3:30 at Northgate. Two HCPs in this building have active suggestions right now.",
-      speech: "Nice — finishing early with Doctor Yuki frees up 47 minutes before your 3:30 at Northgate. Two H C Ps in this building have active suggestions right now. Doctor Amara Chen in Suite 402, high priority, and Doctor Ravi Patel in Suite 210, medium. Chen is the stronger use of the window — want the detail?",
+      text: "Good — wrapping early with Dr. Watanabe gives you about **45 minutes**. Two prescribers in University Rehabilitation Center have active suggestions today.",
+      speech: "Good. Wrapping early with Doctor Watanabe gives you about forty five minutes. Two prescribers in University Rehabilitation Center have active suggestions today. Doctor Priya Raman in Suite 320, high priority, same floor as Doctor Watanabe. And Doctor Marcus Okonkwo in Suite 145 on the ground floor, medium. Raman is the better use of the window — want the detail?",
       blocks: [
         {
           type: 'hcp',
-          name: 'Dr. Amara Chen', initials: 'AC',
-          specialty: 'Interventional Cardiology', tier: 'Tier A',
-          location: 'Suite 402 · two floors up', walk: '3 min walk',
+          name: 'Dr. Priya Raman', initials: 'PR',
+          specialty: 'Hematology / Oncology', tier: 'High priority target',
+          location: 'Suite 320 · same floor as Dr. Watanabe', walk: '1 min walk',
           priority: 'high',
-          suggestion: 'Share the ODYSSEY-3 12-month outcomes',
-          reason: 'New data published Aug 28. Tier A writer, trending down 12% quarter over quarter.',
+          suggestion: 'Walk the staff through the Pacrivex titration pack',
+          reason: 'Three new starts in the last 30 days with no titration support delivered — the same gap that drove the tolerability drop-offs on her panel.',
           meta: [
-            { label: 'Last touch', value: '41 days ago, in person' },
-            { label: 'Preferred channel', value: 'In person, mornings' },
-            { label: 'Suggestion expires', value: 'In 6 days' }
+            { label: 'Pacrivex TRx', value: '11 · NRx 6' },
+            { label: 'Last touch', value: '38 days ago, in person' },
+            { label: 'Suggestion expires', value: 'In 5 days' }
           ],
-          tags: ['Open to reps today', 'Speaker program alum']
+          tags: ['Open to reps today', 'Titration pack not yet delivered']
         },
         {
           type: 'hcp',
-          name: 'Dr. Ravi Patel', initials: 'RP',
-          specialty: 'Internal Medicine', tier: 'Tier B',
-          location: 'Suite 210 · ground floor', walk: '2 min walk',
+          name: 'Dr. Marcus Okonkwo', initials: 'MO',
+          specialty: 'Internal Medicine', tier: 'Medium priority target',
+          location: 'Suite 145 · ground floor', walk: '3 min walk',
           priority: 'medium',
-          suggestion: 'Confirm the Meridian Health formulary win',
-          reason: 'Effective Oct 1, and 60% of his panel is Meridian-covered.',
+          suggestion: 'Share the Pacrivex early tolerability data',
+          reason: 'Writes Momelyx at 14 TRx against 4 for Pacrivex. Tolerability is the objection he raised in July.',
           meta: [
-            { label: 'Last touch', value: '12 days ago, email' },
-            { label: 'Open items', value: '2 sample requests pending' },
-            { label: 'Suggestion expires', value: 'In 12 days' }
+            { label: 'Pacrivex TRx', value: '4 · NRx 2' },
+            { label: 'Last touch', value: '3 weeks ago, email' },
+            { label: 'Suggestion expires', value: 'In 11 days' }
           ],
-          tags: ['Sample requests pending']
+          tags: ['Momelyx loyalist']
         },
         {
           type: 'callout', tone: 'info',
-          text: 'Dr. Chen is the stronger use of the window — she has the tighter expiry and the bigger drop in share.'
+          text: 'Dr. Raman is the stronger stop — same floor, tighter expiry, and three unsupported new starts on the line.'
         }
       ],
-      chips: [
-        'Tell me more about Dr. Chen',
-        'Is she free right now?',
-        'Why is Dr. Patel only medium?'
-      ]
+      chips: ['Tell me about Dr. Raman', 'Is she free right now?', 'Why is Okonkwo only medium?']
     },
 
-    /* ── 2. Detail on Dr. Chen ────────────────────────────────────────── */
+    /* ── Dr. Watanabe profile (mirrors the live transcript) ───────── */
     {
-      id: 'chen_detail',
+      id: 'yuki_profile',
       keywords: [
-        { w: 3, any: ['chen', 'amara'] },
-        { w: 2, any: ['tell me more', 'more about', 'details', 'brief me', 'background', 'why her', "what's the suggestion", 'what is the suggestion'] },
-        { w: 1, any: ['first one', 'the cardiologist', 'suite 402'] }
+        { w: 3, any: ['yuki', 'watanabe'] },
+        { w: 2, any: ['tell me about', 'who is', 'brief me', 'profile', 'background', 'summary'] }
       ],
-      after: ['nearby'],
-      text: "Here's the full picture on Dr. Chen.",
-      speech: "Here's the full picture on Doctor Chen. She's a Tier A interventional cardiologist. Her share dropped twelve percent last quarter, mostly to a competitor's once-daily option, and the ODYSSEY-3 twelve-month data published on August 28th answers her main objection. Lead with the durability curve, then the elderly subgroup — she's asked about it twice. One compliance note: the pediatric indication is not approved, so keep off it.",
+      text: "Dr. Yuki Watanabe — hematology and internal medicine in Fort Worth, a high priority target affiliated with University Rehabilitation Center.",
+      speech: "Doctor Yuki Watanabe is a hematology and internal medicine specialist in Fort Worth, and she is a high priority target, affiliated with University Rehabilitation Center. On prescribing, she has about sixteen total prescriptions for Pacrivex with about nine new prescriptions, and she also writes competitors Momelyx at about twelve total prescriptions and Ruxoril at about nine. Your most recent touch was an in person call on September first about Pacrivex, focused on early tolerability concerns and walking the staff through the starter and titration pack. What do you want next, her recent interaction history in more detail, or nearby doctors you can see around her office?",
       blocks: [
         {
           type: 'kv',
-          title: 'Dr. Amara Chen · Suite 402',
+          title: 'Dr. Yuki Watanabe',
           rows: [
-            ['Specialty', 'Interventional Cardiology · Tier A'],
-            ['Affiliation', 'Bayview Cardiac Institute'],
-            ['Share trend', '▼ 12% QoQ — shifting to a once-daily competitor'],
-            ['Last 3 touches', 'Jul 29 in person · Jun 12 email · May 30 in person'],
-            ['Open request', 'Asked twice for elderly subgroup data']
+            ['Specialty', 'Hematology · Internal Medicine'],
+            ['Location', 'Fort Worth, TX'],
+            ['Affiliation', 'University Rehabilitation Center'],
+            ['Segment', 'High priority target']
+          ]
+        },
+        {
+          type: 'rx',
+          title: 'Prescribing',
+          rows: [
+            { name: 'Pacrivex', value: 16, sub: 'TRx · 9 NRx', max: 16, brand: true },
+            { name: 'Momelyx', value: 12, sub: 'TRx · competitor', max: 16 },
+            { name: 'Ruxoril', value: 9, sub: 'TRx · competitor', max: 16 }
+          ]
+        },
+        {
+          type: 'kv',
+          title: 'Most recent touch',
+          rows: [
+            ['When', 'September 1 · in-person call'],
+            ['Product', 'Pacrivex'],
+            ['Focus', 'Early tolerability concerns'],
+            ['Also covered', 'Walked staff through the starter and titration pack']
+          ]
+        }
+      ],
+      chips: ['Her interaction history in more detail', 'Nearby doctors around her office', 'Log my call with Dr. Watanabe']
+    },
+
+    {
+      id: 'yuki_history',
+      keywords: [
+        { w: 3, any: ['interaction history', 'more detail', 'recent history', 'history in more detail', 'past interactions', 'previous calls', 'touch history'] }
+      ],
+      after: ['yuki_profile'],
+      text: "Her last four touches, most recent first.",
+      speech: "Here are her last four touches. September first, in person, Pacrivex, early tolerability and the titration pack — she asked for real world discontinuation rates. August eleventh, a phone call on formulary coverage. July twenty second, in person, where she first raised tolerability. And June thirtieth, an email with the dosing guide, which she opened twice. The through line is tolerability: she has raised it three times and it is still open.",
+      blocks: [
+        {
+          type: 'kv',
+          title: 'Interaction history',
+          rows: [
+            ['Sept 1 · in person', 'Pacrivex — early tolerability, titration pack. Asked for real-world discontinuation rates.'],
+            ['Aug 11 · phone', 'Formulary coverage for the Meridian and Cascade plans.'],
+            ['Jul 22 · in person', 'First raised tolerability in weeks 1–2.'],
+            ['Jun 30 · email', 'Dosing guide sent — opened twice, no reply.']
+          ]
+        },
+        { type: 'callout', tone: 'warn', text: 'Tolerability has come up three times and is still open. The real-world discontinuation data she asked for on Sept 1 has not been sent.' }
+      ],
+      chips: ['Send her the discontinuation data', 'Nearby doctors around her office', 'Log my call with Dr. Watanabe']
+    },
+
+    {
+      id: 'send_data',
+      keywords: [{ w: 3, any: ['send her the', 'send the discontinuation', 'send discontinuation', 'send it to her', 'send the data'] }],
+      after: ['yuki_history'],
+      text: "Drafted and waiting in your outbox — nothing sends until you approve it.",
+      speech: "Drafted and waiting in your outbox. Nothing sends until you approve it.",
+      blocks: [
+        {
+          type: 'note',
+          title: 'Draft · to Dr. Yuki Watanabe — awaiting approval',
+          body: "Subject: Real-world discontinuation data you asked about\n\nDr. Watanabe,\n\nFollowing up on September 1 — you asked for real-world discontinuation rates for Pacrivex in the first eight weeks. The approved summary is attached.\n\nHappy to walk your staff through the titration pack again if that would help the early weeks.\n\n— John"
+        },
+        { type: 'callout', tone: 'info', text: 'Attachment: Pacrivex real-world discontinuation summary — MLR approved Aug 26.' }
+      ],
+      chips: ['Nearby doctors around her office', "What's next today?"]
+    },
+
+    /* ── Dr. Raman ───────────────────────────────────────────────── */
+    {
+      id: 'raman',
+      keywords: [
+        { w: 3, any: ['raman', 'priya'] },
+        { w: 2, any: ['tell me about', 'more about', 'details', 'brief me', 'why her', 'first one', 'suite 320'] }
+      ],
+      after: ['nearby'],
+      text: "Here's the picture on Dr. Raman.",
+      speech: "Here's the picture on Doctor Raman. Hematology oncology, high priority, Suite 320 — the same floor you're on. Eleven total Pacrivex prescriptions, six of them new, and three of those starts landed in the last thirty days with no titration support delivered. That is exactly the gap that produced early drop-offs on Doctor Watanabe's panel. Lead with the titration pack, offer the staff walkthrough, and confirm who on her team handles new starts.",
+      blocks: [
+        {
+          type: 'kv',
+          title: 'Dr. Priya Raman · Suite 320',
+          rows: [
+            ['Specialty', 'Hematology / Oncology · high priority'],
+            ['Affiliation', 'University Rehabilitation Center'],
+            ['Pacrivex', '11 TRx · 6 NRx · 3 starts in the last 30 days'],
+            ['Gap', 'No titration pack delivered to her staff'],
+            ['Last touch', '38 days ago, in person']
           ]
         },
         {
           type: 'panel',
           title: 'Talking points, in order',
           items: [
-            'Open on the ODYSSEY-3 12-month durability curve — it directly answers the once-daily objection she raised in July.',
-            'Then the elderly subgroup analysis she has now asked for twice.',
-            'Close by confirming her preferred sample quantity before the Oct 1 formulary change.'
+            'Open on the three recent starts — she has the volume, the support has not followed.',
+            'Offer the staff walkthrough of the starter and titration pack; it is the same fix that steadied Dr. Watanabe’s early weeks.',
+            'Confirm who on her team owns new starts, so the pack reaches the right person.'
           ]
         },
         {
           type: 'checklist',
-          title: 'Approved materials, ready on your tablet',
+          title: 'Approved materials on your tablet',
           items: [
-            'ODYSSEY-3 12-month outcomes deck — approved Sept 2',
-            'Elderly subgroup one-pager — approved Sept 2',
+            'Pacrivex starter and titration pack — MLR approved Aug 26',
+            'Early tolerability summary — MLR approved Aug 26',
             'Prescribing information — current version'
           ]
         },
-        {
-          type: 'callout', tone: 'warn',
-          text: 'Compliance: the pediatric indication is not approved. Keep the discussion on-label, and log any adverse event within 24 hours.'
-        }
+        { type: 'callout', tone: 'warn', text: 'On-label only. Log any adverse event within 24 hours of the conversation.' }
       ],
-      chips: [
-        'Is she free right now?',
-        'What should I open with?',
-        'What about Dr. Patel?'
-      ]
+      chips: ['Is she free right now?', 'What should I open with?', 'What about Dr. Okonkwo?']
     },
 
-    /* ── 3. Availability ──────────────────────────────────────────────── */
+    /* ── Availability ────────────────────────────────────────────── */
     {
-      id: 'chen_availability',
+      id: 'availability',
       keywords: [
-        { w: 3, any: ['free right now', 'is she free', 'is she available', 'available now', 'can i see her', 'can i drop in', 'see her now', 'walk in', 'is he free', 'office hours', 'right now'] },
-        { w: 1, any: ['now', 'today', 'time'] }
+        { w: 3, any: ['free right now', 'is she free', 'is she available', 'available now', 'can i see her', 'can i drop in', 'see her now', 'walk in', 'office hours', 'right now', 'is he free'] },
+        { w: 1, any: ['now', 'today'] }
       ],
-      after: ['nearby', 'chen_detail'],
-      text: "Her office keeps Tuesday afternoons open for reps, and Dana — her scheduler — has a 20-minute slot at 2:40. It's 2:18 now, so you'd get there with time to spare.",
-      speech: "Her office keeps Tuesday afternoons open for reps, and Dana, her scheduler, has a twenty minute slot at 2:40. It's 2:18 now, so you'd get there with time to spare. That still leaves you a comfortable eighteen minute drive to Northgate. Want me to request it?",
+      after: ['nearby', 'raman'],
+      text: "Her office keeps an afternoon window for reps, and her coordinator Dana has a 20-minute slot open shortly.",
+      speech: "Her office keeps an afternoon window for reps, and her coordinator Dana has a twenty minute slot open in about twenty minutes. That still leaves you clear for your next confirmed call. Want me to request it?",
       blocks: [
         {
           type: 'slots',
-          title: 'Dr. Chen · rep access window, today',
+          title: 'Dr. Raman · rep access window, today',
           options: [
-            { time: '2:40 pm', label: '20 minutes · Suite 402', status: 'open' },
-            { time: '3:05 pm', label: '15 minutes · would make Northgate tight', status: 'tight' },
-            { time: '4:00 pm', label: 'Window closes', status: 'closed' }
+            { time: 'In 20 minutes', label: '20 minutes · Suite 320', status: 'open' },
+            { time: 'In 50 minutes', label: '15 minutes · would make your next call tight', status: 'tight' },
+            { time: 'In 1 hr 40 min', label: 'Window closes', status: 'closed' }
           ]
         },
-        {
-          type: 'callout', tone: 'good',
-          text: 'A 2:40 visit still leaves an 18-minute drive to Northgate with 12 minutes of buffer.'
-        }
+        { type: 'callout', tone: 'good', text: 'Taking the first slot still leaves a comfortable buffer before your next confirmed call.' }
       ],
-      chips: [
-        'Yes, book the 2:40',
-        'Try a different time',
-        'No, go see Dr. Patel instead'
-      ]
+      chips: ['Yes, book it', 'Try a different time', 'Go see Dr. Okonkwo instead']
     },
 
-    /* ── 4. Booking confirmation ──────────────────────────────────────── */
     {
       id: 'book',
       keywords: [
-        { w: 3, any: ['book it', 'book the', 'yes book', 'lock it in', 'set it up', 'request it', 'schedule it', 'put it on my calendar', 'add it to my schedule', 'go ahead', "let's do it", 'do it'] },
+        { w: 3, any: ['book it', 'book the', 'yes book', 'lock it in', 'set it up', 'request it', 'schedule it', 'add it to my schedule', 'go ahead', "let's do it", 'do it'] },
         { w: 2, any: ['yes', 'yeah', 'yep', 'sure', 'please'] }
       ],
-      only: ['chen_availability', 'alt_time'],
-      text: "Done — 2:40 pm with Dr. Chen is requested and your route is updated.",
-      speech: "Done. I've requested 2:40 with Doctor Chen's office and pinned Suite 402 to your route. The ODYSSEY-3 deck and the elderly subgroup one-pager are queued on your tablet. I'll nudge you at 2:35, and I'm holding Doctor Patel as a backup in case the visit runs short.",
+      only: ['availability', 'alt_time'],
+      text: "Done — the slot is requested and your route is updated.",
+      speech: "Done. I've requested the slot with Doctor Raman's office and pinned Suite 320 to your route. The titration pack and the early tolerability summary are queued on your tablet. I'll remind you five minutes before, and I'm holding Doctor Okonkwo as a backup if the visit runs short.",
       blocks: [
         {
           type: 'checklist',
           title: 'Handled for you',
           items: [
-            '2:40 pm request sent to Dana at Suite 402 — confirmation usually lands within 5 minutes',
-            'Suite 402 pinned to your route; Northgate arrival re-estimated at 3:22',
-            'ODYSSEY-3 deck and elderly subgroup one-pager queued on your tablet',
-            'Reminder set for 2:35',
-            'Dr. Patel held as a backup if the visit runs short'
+            'Slot requested with Dana at Suite 320 — confirmation usually lands within 5 minutes',
+            'Suite 320 pinned to your route; next-call arrival re-estimated',
+            'Titration pack and early tolerability summary queued on your tablet',
+            'Reminder set for 5 minutes before',
+            'Dr. Okonkwo held as a backup if the visit runs short'
           ]
         }
       ],
-      chips: [
-        'Log my call with Dr. Yuki',
-        'What should I open with?',
-        "What's after this?"
-      ]
+      chips: ['What should I open with?', 'Log my call with Dr. Watanabe', "What's next today?"]
     },
 
-    /* ── 4b. Different time ───────────────────────────────────────────── */
     {
       id: 'alt_time',
-      keywords: [
-        { w: 3, any: ['different time', 'another time', 'later', 'something else', 'other options', 'not then'] }
-      ],
-      only: ['chen_availability'],
-      text: "The 3:05 slot is the only other one today, and it puts your Northgate arrival at 3:41 — eleven minutes late. Tomorrow she has 11:15 am open, which fits your Bayview loop cleanly.",
-      speech: "The 3:05 slot is the only other one today, and it puts your Northgate arrival at 3:41 — eleven minutes late. Tomorrow she has 11:15 in the morning open, which fits your Bayview loop cleanly. My recommendation is still the 2:40 today. Which would you like?",
+      keywords: [{ w: 3, any: ['different time', 'another time', 'later', 'other options', 'not then'] }],
+      only: ['availability'],
+      text: "One other slot today, and a cleaner one tomorrow.",
+      speech: "There's one other slot today, but it makes your next confirmed call tight. Tomorrow morning she has thirty minutes at nine forty five, which fits your Fort Worth loop cleanly. My recommendation is still the slot today. Which would you like?",
       blocks: [
         {
           type: 'slots',
           title: 'Alternatives',
           options: [
-            { time: 'Today 3:05 pm', label: 'Arrives at Northgate 3:41 — 11 min late', status: 'tight' },
-            { time: 'Tomorrow 11:15 am', label: '30 minutes · fits your Bayview loop', status: 'open' }
+            { time: 'Today, in 50 min', label: '15 minutes · makes your next call tight', status: 'tight' },
+            { time: 'Tomorrow 9:45 am', label: '30 minutes · fits your Fort Worth loop', status: 'open' }
           ]
         }
       ],
-      chips: ['Book the 2:40 today after all', 'Take tomorrow at 11:15', 'Go see Dr. Patel instead']
+      chips: ['Book the slot today after all', 'Take tomorrow at 9:45', 'Go see Dr. Okonkwo instead']
     },
 
-    /* ── 5. Dr. Patel ─────────────────────────────────────────────────── */
+    /* ── Dr. Okonkwo ─────────────────────────────────────────────── */
     {
-      id: 'patel',
+      id: 'okonkwo',
       keywords: [
-        { w: 3, any: ['patel', 'ravi'] },
-        { w: 2, any: ['only medium', 'why medium', 'the other one', 'second one', 'internal medicine', 'suite 210', 'instead'] }
+        { w: 3, any: ['okonkwo', 'marcus'] },
+        { w: 2, any: ['only medium', 'why medium', 'the other one', 'second one', 'internal medicine', 'suite 145', 'instead'] }
       ],
-      text: "Dr. Patel scores medium because his suggestion doesn't bite until the formulary change lands on Oct 1 — there's no urgency this week, and email has worked well with him.",
-      speech: "Doctor Patel scores medium because his suggestion doesn't bite until the formulary change lands on October first. There's no urgency this week, and email has worked well with him — he replied to the last two. If you have ten minutes after Doctor Chen, the highest-value thing is confirming his sample quantities in person. Otherwise I can draft the email.",
+      text: "Dr. Okonkwo scores medium because he's a Momelyx loyalist with low Pacrivex volume — a longer play than Dr. Raman.",
+      speech: "Doctor Okonkwo scores medium because he's a Momelyx loyalist. Fourteen total prescriptions for Momelyx against four for Pacrivex, and the objection he raised in July was tolerability. That's a longer play than Doctor Raman, where three new starts are already on the line. If you have ten minutes after Raman, the highest value move is leaving the early tolerability summary and asking what would make him try one more start.",
       blocks: [
         {
-          type: 'kv',
-          title: 'Dr. Ravi Patel · Suite 210',
+          type: 'rx',
+          title: 'Dr. Marcus Okonkwo · Suite 145',
           rows: [
-            ['Specialty', 'Internal Medicine · Tier B'],
-            ['Panel', '~60% Meridian Health covered'],
-            ['Open items', '2 sample requests, submitted Aug 27'],
-            ['Channel', 'Email — replied to the last 2'],
-            ['Why medium', 'No urgency until the Oct 1 formulary effective date']
+            { name: 'Momelyx', value: 14, sub: 'TRx · competitor', max: 14 },
+            { name: 'Pacrivex', value: 4, sub: 'TRx · 2 NRx', max: 14, brand: true }
           ]
         },
         {
           type: 'panel',
           title: 'If you do stop by',
           items: [
-            'Confirm sample quantities before Oct 1 so the first covered scripts are easy.',
-            'Leave the Meridian coverage summary — approved Sept 2.',
-            'Ten minutes is enough; he rarely runs long.'
+            'Leave the early tolerability summary — it answers the objection he raised in July.',
+            'Ask what it would take for one more Pacrivex start; you need the real barrier, not the stated one.',
+            'Ten minutes is enough. He rarely runs long.'
           ]
         }
       ],
-      chips: ['Draft the email to Dr. Patel', 'Back to Dr. Chen', "What's after this?"]
+      chips: ['Back to Dr. Raman', 'Log my call with Dr. Watanabe', "What's next today?"]
     },
 
-    {
-      id: 'patel_email',
-      keywords: [{ w: 3, any: ['draft the email', 'send him an email', 'write the email', 'email him', 'draft an email'] }],
-      after: ['patel'],
-      text: "Drafted. It's sitting in your outbox for review — nothing sends until you approve it.",
-      speech: "Drafted. It's in your outbox for review — nothing sends until you approve it.",
-      blocks: [
-        {
-          type: 'note',
-          title: 'Draft · to Dr. Ravi Patel — awaiting your approval',
-          body: "Subject: Meridian Health coverage, effective October 1\n\nDr. Patel,\n\nQuick note ahead of October 1: Meridian Health has added our therapy to the preferred tier, which covers roughly 60% of your panel.\n\nI've attached the approved coverage summary. Your two sample requests from August 27 are still open — reply with the quantities you'd like and I'll have them to your office before the effective date.\n\nHappy to stop by Suite 210 if that's easier.\n\n— Jordan Ellis"
-        },
-        { type: 'callout', tone: 'info', text: 'Attachment: Meridian coverage summary — approved Sept 2.' }
-      ],
-      chips: ['Back to Dr. Chen', 'Log my call with Dr. Yuki', "That's all for now"]
-    },
-
-    /* ── 6. Logging the Yuki call ─────────────────────────────────────── */
-    {
-      id: 'log_start',
-      keywords: [
-        { w: 3, any: ['log my call', 'log the call', 'log my visit', 'write up', 'call note', 'log yuki', 'log it'] },
-        { w: 1, any: ['yuki', 'log'] }
-      ],
-      text: "Ready. Your calendar has Dr. Yuki from 1:52 to 2:14 — 22 minutes, in person, Suite 310. Tell me how it went and I'll draft the note for your review.",
-      speech: "Ready. Your calendar has Doctor Yuki from 1:52 to 2:14 — twenty two minutes, in person, Suite 310. Tell me how it went and I'll draft the note for your review before anything reaches the C R M.",
-      blocks: [
-        {
-          type: 'kv',
-          title: 'Pre-filled from your calendar',
-          rows: [
-            ['HCP', 'Dr. Hana Yuki · Cardiology · Tier A'],
-            ['When', 'Today, 1:52 – 2:14 pm (22 min)'],
-            ['Where', 'Bayview Medical Plaza, Suite 310'],
-            ['Type', 'In-person detail'],
-            ['Samples', 'None recorded — say so if that changed']
-          ]
-        }
-      ],
-      chips: [
-        'She’s interested but wants payer data',
-        'It went well, she asked about prior authorization',
-        'Cancel the note'
-      ]
-    },
-
-    {
-      id: 'log_outcome',
-      keywords: [
-        { w: 3, any: ['payer data', 'prior authorization', 'prior auth', 'went well', 'interested', 'she asked', 'coverage question', 'it was good', 'positive'] }
-      ],
-      only: ['log_start'],
-      text: "Got it. Here's the draft — read it back and I'll file it, or tell me what to change.",
-      speech: "Got it. Here's the draft. Read it over, and I'll file it when you say so. I also spotted a follow-up: the payer one-pager was approved on September second, so I've queued a suggestion to send it to her tomorrow morning.",
-      blocks: [
-        {
-          type: 'note',
-          title: 'Draft call note · Dr. Hana Yuki · Sept 8, 1:52–2:14 pm',
-          body: "In-person detail, Bayview Suite 310, 22 minutes.\n\nDiscussed current efficacy data. Dr. Yuki is receptive to the therapy but raised prior-authorization burden as her main barrier — reports two recent denials that were later overturned on appeal.\n\nRequested payer coverage detail for Meridian Health and Cascade Blue.\n\nNo samples left. No adverse events reported.\n\nNext step: send the approved payer coverage one-pager and follow up within one week."
-        },
-        {
-          type: 'checklist',
-          title: 'Follow-ups I queued',
-          items: [
-            'Send the payer coverage one-pager (approved Sept 2) — tomorrow, 8:00 am',
-            'New suggestion created: “Follow up on payer coverage — Dr. Yuki”, expires in 9 days'
-          ]
-        },
-        { type: 'callout', tone: 'info', text: 'Nothing is written to the CRM until you say “file it”.' }
-      ],
-      chips: ['File it', 'Change the next step', "What's after this?"]
-    },
-
-    {
-      id: 'log_file',
-      keywords: [{ w: 3, any: ['file it', 'save it', 'submit it', 'send it to crm', 'looks good', 'thats right', "that's right", 'approve it'] }],
-      only: ['log_outcome'],
-      text: "Filed. The note is in the CRM against today's visit and the follow-up is on tomorrow's list.",
-      speech: "Filed. The note is in the C R M against today's visit, and the follow-up is on tomorrow's list. That clears your only outstanding write-up for the day.",
-      blocks: [{ type: 'callout', tone: 'good', text: 'Call note synced · 2:21 pm · no outstanding write-ups today.' }],
-      chips: ['What’s after this?', "That's all for now"]
-    },
-
-    /* ── 7. Opener / coaching ─────────────────────────────────────────── */
+    /* ── Coaching ────────────────────────────────────────────────── */
     {
       id: 'opener',
-      keywords: [
-        { w: 3, any: ['what should i open with', 'how should i open', 'opening line', 'what do i say', 'how do i start', 'first thing i say', 'what should i lead with', 'lead with'] }
-      ],
-      text: "Keep it short and tie it to what she asked you for last time.",
-      speech: "Keep it short and tie it straight to what she asked you for last time. Something like: Doctor Chen, last time you wanted to see whether the effect held past six months. The twelve month ODYSSEY-3 data came out ten days ago, and I brought the elderly subgroup you asked about twice. Two minutes? That names her objection, gives her the new fact, and asks for a small commitment.",
+      keywords: [{ w: 3, any: ['what should i open with', 'how should i open', 'opening line', 'what do i say', 'how do i start', 'lead with', 'first thing i say'] }],
+      text: "Keep it short and put her own numbers in the first sentence.",
+      speech: "Keep it short and put her own numbers in the first sentence. Something like: Doctor Raman, you've started three patients on Pacrivex in the last month and your staff never got the titration pack. I've got ten minutes to walk them through it — is now bad? That names a real gap, offers a fix rather than a pitch, and asks for a small commitment.",
       blocks: [
         {
           type: 'note',
           title: 'Suggested opener',
-          body: "“Dr. Chen — last time you wanted to know whether the effect held past six months. The 12-month ODYSSEY-3 data published ten days ago, and I brought the elderly subgroup you've asked about twice. Two minutes?”"
+          body: "“Dr. Raman — you've started three patients on Pacrivex in the last month, and your staff never got the titration pack. I've got ten minutes to walk them through it. Is now bad?”"
         },
         {
           type: 'panel',
           title: 'Why it works',
           items: [
-            'Names her own objection back to her, so it does not sound like a generic detail.',
-            'Leads with the new fact, which is the only reason this visit is worth her time.',
-            'Asks for a small, easy commitment rather than an open-ended meeting.'
+            'Leads with her own data, so it does not sound like a generic detail.',
+            'Offers a fix for a gap rather than a product pitch.',
+            '“Is now bad?” is far easier to say yes to than “do you have time?”'
           ]
         }
       ],
-      chips: ['Is she free right now?', 'What should I leave behind?', "What's after this?"]
+      chips: ['Is she free right now?', 'What should I leave behind?', "What's next today?"]
     },
 
     {
       id: 'leave_behind',
-      keywords: [
-        { w: 3, any: ['leave behind', 'what content', 'what materials', 'what should i bring', 'what do i bring', 'which deck'] }
-      ],
-      text: "Two pieces, both approved and already on your tablet.",
-      speech: "Two pieces, both approved and already on your tablet. The ODYSSEY-3 twelve month outcomes deck, and the elderly subgroup one-pager. Leave the one-pager — it's the thing she actually asked for. Current prescribing information goes with either.",
+      keywords: [{ w: 3, any: ['leave behind', 'what content', 'what materials', 'what should i bring', 'what do i bring', 'which deck'] }],
+      text: "Two pieces, both MLR approved and already on your tablet.",
+      speech: "Two pieces, both approved and already on your tablet. The Pacrivex starter and titration pack, which is the leave-behind, and the early tolerability summary to present on screen. Current prescribing information goes with either.",
       blocks: [
         {
           type: 'checklist',
           title: 'Approved for use today',
           items: [
-            'ODYSSEY-3 12-month outcomes deck — approved Sept 2 — present on screen',
-            'Elderly subgroup one-pager — approved Sept 2 — leave behind',
+            'Pacrivex starter and titration pack — approved Aug 26 — leave behind',
+            'Early tolerability summary — approved Aug 26 — present on screen',
             'Prescribing information — current version — required with either piece'
           ]
         },
-        { type: 'callout', tone: 'warn', text: 'The older 6-month deck is retired as of Sept 2. I removed it from your tablet.' }
+        { type: 'callout', tone: 'warn', text: 'The pre-August tolerability deck is retired. I removed it from your tablet.' }
       ],
-      chips: ['Is she free right now?', 'What should I open with?', "What's after this?"]
+      chips: ['Is she free right now?', 'What should I open with?', "What's next today?"]
     },
 
-    /* ── 8. Schedule / wrap ───────────────────────────────────────────── */
+    /* ── Call logging ────────────────────────────────────────────── */
+    {
+      id: 'log_start',
+      keywords: [
+        { w: 3, any: ['log my call', 'log the call', 'log my visit', 'write up', 'call note', 'log it'] },
+        { w: 1, any: ['yuki', 'watanabe', 'log'] }
+      ],
+      text: "Ready. Tell me how it went and I'll draft the note for your review.",
+      speech: "Ready. I have the visit pre-filled from your schedule — Doctor Watanabe, in person, Suite 310. Tell me how it went and I'll draft the note for your review before anything reaches the C R M.",
+      blocks: [
+        {
+          type: 'kv',
+          title: 'Pre-filled from your schedule',
+          rows: [
+            ['HCP', 'Dr. Yuki Watanabe · Hematology / Internal Medicine'],
+            ['Where', 'University Rehabilitation Center, Suite 310'],
+            ['Type', 'In-person call'],
+            ['Product', 'Pacrivex'],
+            ['Samples', 'None recorded — say so if that changed']
+          ]
+        }
+      ],
+      chips: ['She wants real-world discontinuation data', 'It went well, tolerability came up again', 'Cancel the note']
+    },
+
+    {
+      id: 'log_outcome',
+      keywords: [{ w: 3, any: ['discontinuation', 'tolerability', 'went well', 'interested', 'she asked', 'she wants', 'it was good', 'positive'] }],
+      only: ['log_start'],
+      text: "Here's the draft — say “file it” and it goes to the CRM, or tell me what to change.",
+      speech: "Here's the draft. Say file it and it goes to the C R M, or tell me what to change. I also queued a follow-up: the real world discontinuation summary was approved on August twenty sixth, so I've scheduled it to go out tomorrow morning.",
+      blocks: [
+        {
+          type: 'note',
+          title: 'Draft call note · Dr. Yuki Watanabe',
+          body: "In-person call, University Rehabilitation Center, Suite 310. Product: Pacrivex.\n\nDiscussed early tolerability in weeks 1–2, which Dr. Watanabe has now raised three times. Walked her staff through the starter and titration pack.\n\nShe requested real-world discontinuation rates for the first eight weeks before committing to further starts.\n\nNo samples left. No adverse events reported.\n\nNext step: send the approved real-world discontinuation summary and follow up within one week."
+        },
+        {
+          type: 'checklist',
+          title: 'Follow-ups queued',
+          items: [
+            'Send the real-world discontinuation summary (approved Aug 26) — tomorrow, 8:00 am',
+            'New suggestion created: “Close the tolerability question — Dr. Watanabe”, expires in 9 days'
+          ]
+        },
+        { type: 'callout', tone: 'info', text: 'Nothing is written to the CRM until you say “file it”.' }
+      ],
+      chips: ['File it', 'Change the next step', "What's next today?"]
+    },
+
+    {
+      id: 'log_file',
+      keywords: [{ w: 3, any: ['file it', 'save it', 'submit it', 'send it to crm', 'looks good', 'approve it', "that's right", 'thats right'] }],
+      only: ['log_outcome'],
+      text: "Filed. The note is in the CRM and the follow-up is on tomorrow's list.",
+      speech: "Filed. The note is in the C R M against today's visit, and the follow-up is on tomorrow's list. That clears your only outstanding write-up.",
+      blocks: [{ type: 'callout', tone: 'good', text: 'Call note synced · no outstanding write-ups today.' }],
+      chips: ["What's next today?", "That's all for now"]
+    },
+
+    /* ── The three welcome starters ──────────────────────────────── */
+    {
+      id: 'week_suggestions',
+      keywords: [{ w: 3, any: ['active suggestions for this week', 'suggestions this week', 'my active suggestions', 'this week', 'my suggestions'] }],
+      text: "Six active suggestions this week. Four are worth your time.",
+      speech: "You have six active suggestions this week, and four are worth your time. Doctor Priya Raman, high priority, the titration pack walkthrough, expiring in five days. Doctor Yuki Watanabe, high, close the tolerability question. Doctor Marcus Okonkwo, medium, early tolerability data. And Doctor Alan Whitfield, medium, a formulary coverage update. The other two are low priority speaker program invitations.",
+      blocks: [
+        {
+          type: 'kv',
+          title: 'Active this week',
+          rows: [
+            ['Dr. Priya Raman · HIGH', 'Titration pack walkthrough — expires in 5 days'],
+            ['Dr. Yuki Watanabe · HIGH', 'Close the open tolerability question — expires in 9 days'],
+            ['Dr. Marcus Okonkwo · MED', 'Share early tolerability data — expires in 11 days'],
+            ['Dr. Alan Whitfield · MED', 'Formulary coverage update — expires in 14 days'],
+            ['2 more · LOW', 'Speaker program invitations — expire in 21 days']
+          ]
+        }
+      ],
+      chips: ['Tell me about Dr. Raman', 'Who is nearby right now?', 'Which HCPs have changed behavior recently?']
+    },
+
+    {
+      id: 'not_contacted',
+      keywords: [{ w: 3, any: ['not contacted', 'have not contacted', "haven't contacted", 'last 4 weeks', 'last four weeks', 'not seen', 'overdue'] }],
+      text: "Five customers have gone four weeks or more without contact. Three are high priority.",
+      speech: "Five customers have gone four weeks or more without contact, and three of them are high priority. Doctor Priya Raman, thirty eight days. Doctor Alan Whitfield, forty one days. Doctor Nina Castellanos, forty six days, and she's your biggest lapsed writer. Then two medium priority targets at around thirty days. Raman is in this building right now, if you want to close one today.",
+      blocks: [
+        {
+          type: 'kv',
+          title: 'No contact in 4+ weeks',
+          rows: [
+            ['Dr. Priya Raman · HIGH', '38 days — in this building right now'],
+            ['Dr. Alan Whitfield · HIGH', '41 days — Arlington, Thursday loop'],
+            ['Dr. Nina Castellanos · HIGH', '46 days — largest lapsed writer, 22 TRx'],
+            ['Dr. Marcus Okonkwo · MED', '31 days — Suite 145, this building'],
+            ['Dr. Sara Lindqvist · MED', '29 days — Denton']
+          ]
+        },
+        { type: 'callout', tone: 'info', text: 'Two of these five are in this building today — Raman and Okonkwo.' }
+      ],
+      chips: ['Tell me about Dr. Raman', 'Is she free right now?', 'What are my active suggestions for this week?']
+    },
+
+    {
+      id: 'changed_behavior',
+      keywords: [{ w: 3, any: ['changed behavior', 'changed behaviour', 'behavior change', 'trending', 'shifted', 'changed recently'] }],
+      text: "Three meaningful shifts in the last 30 days.",
+      speech: "Three meaningful shifts in the last thirty days. Doctor Nina Castellanos is down thirty one percent on Pacrivex and up on Momelyx — that's the one to worry about. Doctor Priya Raman is up, three new starts, but with no titration support, so those starts are fragile. And Doctor Yuki Watanabe has flattened after four months of growth, which lines up with the tolerability question she keeps raising.",
+      blocks: [
+        {
+          type: 'kv',
+          title: 'Behavior change · last 30 days',
+          rows: [
+            ['Dr. Nina Castellanos', '▼ 31% Pacrivex, ▲ Momelyx — 46 days since contact'],
+            ['Dr. Priya Raman', '▲ 3 new starts — but no titration support delivered'],
+            ['Dr. Yuki Watanabe', 'Flat after 4 months of growth — open tolerability question']
+          ]
+        },
+        { type: 'callout', tone: 'warn', text: 'Castellanos is the real risk: the largest decline and the longest gap since contact.' }
+      ],
+      chips: ['Who is nearby right now?', 'Tell me about Dr. Raman', 'What are my active suggestions for this week?']
+    },
+
+    /* ── Schedule / utility ──────────────────────────────────────── */
     {
       id: 'whats_next',
-      keywords: [
-        { w: 3, any: ["what's after this", 'what is after this', "what's next", 'what is next', 'rest of my day', 'my day', 'my schedule', 'what else today', "what's left", 'after that'] }
-      ],
-      text: "After Bayview you're clear until 3:30.",
-      speech: "After Bayview you're clear until 3:30, when you're with Doctor Elena Sandoval at Northgate Cardiovascular, Suite 415 — eighteen minutes by car. She's confirmed. Then territory wrap-up at 4:30. The only thing outstanding is the Doctor Yuki call note.",
+      keywords: [{ w: 3, any: ["what's next", 'what is next', 'rest of my day', 'my day', 'my schedule', 'what else today', "what's left", 'after this', "what's after"] }],
+      text: "Two stops left after this building.",
+      speech: "After this building you have two stops. Doctor Alan Whitfield in Arlington, confirmed, about a thirty five minute drive. Then your territory wrap-up. The only thing outstanding is the Doctor Watanabe call note.",
       blocks: [
         {
           type: 'kv',
           title: 'Remaining today',
           rows: [
-            ['2:40 pm', 'Dr. Amara Chen — Bayview, Suite 402 (requested)'],
-            ['3:30 pm', 'Dr. Elena Sandoval — Northgate, Suite 415 (confirmed, 18 min drive)'],
-            ['4:30 pm', 'Territory wrap-up'],
-            ['Outstanding', 'Dr. Yuki call note not yet logged']
+            ['Next', 'Dr. Priya Raman — Suite 320 (if you book it)'],
+            ['Then', 'Dr. Alan Whitfield — Arlington, confirmed · ~35 min drive'],
+            ['Last', 'Territory wrap-up'],
+            ['Outstanding', 'Dr. Watanabe call note not yet logged']
           ]
         }
       ],
-      chips: ['Log my call with Dr. Yuki', 'Brief me on Dr. Sandoval', "That's all for now"]
-    },
-
-    {
-      id: 'sandoval',
-      keywords: [{ w: 3, any: ['sandoval', 'elena', '3:30', 'northgate'] }],
-      text: "Dr. Sandoval, 3:30 at Northgate Suite 415 — electrophysiology, Tier A, and a reliable speaker.",
-      speech: "Doctor Sandoval, 3:30 at Northgate Suite 415. Electrophysiology, Tier A, and a reliable speaker — she's done two of the last three regional programs. Her open suggestion is the invitation to the October 14th program; seats close September 26th. Last touch was three weeks ago and it was positive.",
-      blocks: [
-        {
-          type: 'kv',
-          title: 'Dr. Elena Sandoval · Northgate Suite 415',
-          rows: [
-            ['Specialty', 'Electrophysiology · Tier A'],
-            ['Open suggestion', 'Invite to the Oct 14 regional speaker program'],
-            ['Deadline', 'Seats close Sept 26'],
-            ['Last touch', '3 weeks ago, in person — positive']
-          ]
-        }
-      ],
-      chips: ['Log my call with Dr. Yuki', "That's all for now"]
+      chips: ['Log my call with Dr. Watanabe', 'Is Dr. Raman free right now?', "That's all for now"]
     },
 
     {
       id: 'wrap',
-      keywords: [
-        { w: 3, any: ["that's all", 'thats all', 'thank you', 'thanks felix', 'thanks', 'nothing else', "i'm good", 'im good', 'goodbye', 'bye', 'done for now'] }
-      ],
-      text: "You're set. I'll nudge you at 2:35 for Suite 402.",
-      speech: "You're set. I'll nudge you at 2:35 for Suite 402, and again when it's time to leave for Northgate. Go get it, Jordan.",
+      keywords: [{ w: 3, any: ["that's all", 'thats all', 'thank you', 'thanks felix', 'thanks', 'nothing else', "i'm good", 'im good', 'goodbye', 'bye', 'done for now'] }],
+      text: "You're set. I'll remind you before the Suite 320 window.",
+      speech: "You're set. I'll remind you before the Suite 320 window, and again when it's time to head to Arlington. Go get it, John.",
       blocks: [],
-      chips: ['Hey FELIX, I wrapped up early with Dr. Yuki, who else is in the same building with an active suggestion?']
-    },
-
-    /* ── Utility intents ──────────────────────────────────────────────── */
-    {
-      id: 'who_is_yuki',
-      keywords: [{ w: 3, any: ['who is dr yuki', 'who is yuki', 'about yuki', 'tell me about yuki'] }],
-      text: "Dr. Hana Yuki — Cardiology, Tier A, Suite 310 in this building. You just left her at 2:14.",
-      speech: "Doctor Hana Yuki — Cardiology, Tier A, Suite 310 in this building. You just left her at 2:14, a twenty two minute in-person detail. Her call note is still unlogged, if you want to do it while it's fresh.",
-      blocks: [],
-      chips: ['Log my call with Dr. Yuki', 'Who else is nearby?']
+      chips: ['Who else is nearby with an active suggestion?']
     },
 
     {
       id: 'help',
       keywords: [{ w: 3, any: ['what can you do', 'help', 'how does this work', 'what can i ask'] }],
-      text: "I'm built for the gaps between calls. Ask me things like:",
+      text: "I'm built for the gaps between calls. Try asking:",
       speech: "I'm built for the gaps between calls. Ask me who's nearby with an active suggestion, brief me on a customer before you walk in, check whether someone can see you now, or log a call and I'll draft the note.",
       blocks: [{
         type: 'panel',
         title: 'Try asking',
         items: [
           '“Who else is in the same building with an active suggestion?”',
-          '“Tell me more about Dr. Chen.”',
-          '“Is she free right now?”',
-          '“Log my call with Dr. Yuki.”',
-          '“What’s after this?”'
+          '“Tell me about Dr. Watanabe.”',
+          '“Is Dr. Raman free right now?”',
+          '“Log my call with Dr. Watanabe.”',
+          '“Which HCPs have changed behavior recently?”'
         ]
       }],
-      chips: ['Hey FELIX, I wrapped up early with Dr. Yuki, who else is in the same building with an active suggestion?']
+      chips: ['Who else is nearby with an active suggestion?', 'What are my active suggestions for this week?']
     }
   ],
 
-  /* Rotating replies when nothing scores high enough. */
   fallbacks: [
     {
-      text: "I didn't catch that one. I can find nearby customers with active suggestions, brief you on an HCP, check availability, or log a call.",
-      speech: "I didn't catch that one. I can find nearby customers with active suggestions, brief you on an H C P, check availability, or log a call.",
-      chips: ['Who else is nearby with a suggestion?', 'Tell me more about Dr. Chen', 'What can you do?']
+      text: "I didn't catch that. I can find nearby customers with active suggestions, brief you on an HCP, check availability, or log a call.",
+      speech: "I didn't catch that. I can find nearby customers with active suggestions, brief you on an H C P, check availability, or log a call.",
+      chips: ['Who is nearby with an active suggestion?', 'Tell me about Dr. Watanabe', 'What can you do?']
     },
     {
       text: "Still not sure what you're after — try one of these, or ask “what can you do?”",
       speech: "Still not sure what you're after. Try one of these, or ask what can you do.",
-      chips: ['Is she free right now?', 'Log my call with Dr. Yuki', "What's after this?"]
+      chips: ['What are my active suggestions for this week?', 'Log my call with Dr. Watanabe', "What's next today?"]
     }
   ]
 };

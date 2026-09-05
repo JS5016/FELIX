@@ -1,7 +1,8 @@
 # FELIX — Ask FELIX
 
 A working voice chatbot modelled on the **Ask FELIX** tab of `zsfelix.com/chat`: a
-field assistant for pharma reps that you talk to between calls.
+field assistant for pharma reps that you talk to between calls, rebuilt from
+screenshots of the real product (Veeva CRM shell, orange theme, live voice call).
 
 It runs entirely in the browser. No build step, no server, no API keys.
 
@@ -19,16 +20,26 @@ python3 -m http.server 8000
 Opening `index.html` directly with `file://` also works, though some browsers only
 grant microphone access over `http://localhost` or HTTPS.
 
+Or just open `felix-standalone.html` — the whole app inlined into one file, no server.
+
 Use Chrome, Edge, or Safari — Firefox has no `SpeechRecognition` and will fall back
 to text input, which runs the same conversation.
 
-## Talking to it
+## Three modes
 
-- **Tap the mic** and speak, or **hold the space bar** as push-to-talk.
-- **Type** into the box instead — the script matches spoken and typed input the same way.
-- **Tap a suggestion chip** to send that exact line.
-- Tapping the mic while FELIX is talking **interrupts him** (barge-in).
-- **Voice on/off** mutes the spoken replies; **Restart** clears the thread.
+Matching the real product, the composer offers *"Type a message, use your mic to
+dictate, or start a live voice call."*
+
+**Welcome** — the fox logo and three starter pills.
+
+**Chat** — type, or tap the **mic** to dictate a single question. Replies stream in
+with rich cards.
+
+**Live voice call** — tap the **phone** or **waveform** button. Full-screen orb,
+`Agent is speaking…` / `Listening…` states, a green LIVE TRANSCRIPT that fills in as
+you talk, a mute button, and **End Conversation**. Turn taking is hands-free: FELIX
+finishes speaking, then the mic reopens automatically. Tap the orb to interrupt him
+mid-sentence.
 
 If the mic is blocked or unavailable, a banner says so and everything still works by typing.
 
@@ -42,14 +53,15 @@ From there it supports a real back-and-forth:
 
 | Ask | FELIX does |
 | --- | --- |
-| Who else is nearby with a suggestion? | Two HCP cards with priority, suite, walk time, the active suggestion and why it fired |
-| Tell me more about Dr. Chen | Full profile, ordered talking points, approved materials, a compliance warning |
-| Is she free right now? | Today's rep-access window with three slots and the impact on the next appointment |
-| Book the 2:40 | Confirms the request, updates the route, queues content, sets a reminder |
-| Why is Dr. Patel only medium? | Explains the scoring, and can draft the email to him |
-| Log my call with Dr. Yuki | Pre-fills from the calendar, drafts a call note from what you say, files it on request |
+| Who else is nearby with a suggestion? | Two HCP cards — priority, suite, walk time, the active suggestion and why it fired |
+| Tell me about Dr. Watanabe | Profile, prescribing bars (Pacrivex vs Momelyx and Ruxoril), and the last touch |
+| Her interaction history in more detail | Last four touches, and the thread running through them |
+| Tell me about Dr. Raman | Ordered talking points, approved materials, a compliance warning |
+| Is she free right now? | Today's rep-access window with three slots and the knock-on to the next call |
+| Book it | Confirms the request, updates the route, queues content, sets a reminder |
+| Log my call with Dr. Watanabe | Pre-fills from the schedule, drafts a call note from what you say, files it on request |
 | What should I open with? | A suggested opener and why it works |
-| What's after this? | The rest of the day, plus a brief on the next HCP |
+| The three welcome pills | Active suggestions this week · not contacted in 4 weeks · changed behavior |
 
 Anything unrecognised gets a rotating fallback that steers you back to what FELIX handles.
 
@@ -61,14 +73,14 @@ so the voice can read numbers and abbreviations naturally), rich cards, and foll
 
 ```js
 {
-  id: 'chen_availability',
+  id: 'availability',
   keywords: [{ w: 3, any: ['is she free', 'available now', 'can i see her'] }],
-  after: ['nearby', 'chen_detail'],   // scores higher right after these turns
-  only: ['chen_availability'],        // (on other nodes) can ONLY follow these turns
+  after: ['nearby', 'raman'],   // scores higher right after these turns
+  only: ['availability'],       // (on other nodes) can ONLY follow these turns
   text:   "Her office keeps Tuesday afternoons open for reps…",
   speech: "Her office keeps Tuesday afternoons open for reps…",  // read aloud
   blocks: [ { type: 'slots', … } ],
-  chips:  ['Yes, book the 2:40', 'Try a different time']
+  chips:  ['Yes, book it', 'Try a different time']
 }
 ```
 
@@ -77,20 +89,27 @@ that fit the conversational context, and takes the best node above a threshold. 
 is what makes short replies like "yes" or "file it" resolve correctly — they only mean
 something after a specific question.
 
-Card types available to `blocks`: `hcp`, `kv`, `panel`, `checklist`, `slots`, `note`,
-`callout`. All are documented at the top of `script-data.js`.
+Card types available to `blocks`: `hcp`, `rx` (prescribing bars), `kv`, `panel`,
+`checklist`, `slots`, `note`, `callout`. All are documented at the top of
+`script-data.js`.
 
 ## Files
 
 ```
-index.html              layout, tabs, the four panels
-assets/styles.css       theme and components
-assets/app.js           speech in/out, script matching, rendering
+index.html              Veeva shell, tabs, welcome / chat / call views
+assets/styles.css       light orange theme and components
+assets/app.js           speech in/out, call state machine, matching, rendering
 assets/script-data.js   the conversation — edit this to change the demo
+build-standalone.js     inlines everything into felix-standalone.html
+felix-standalone.html   single-file build, opens with no server
 ```
 
 ## Notes
 
-All data is fictional — HCPs, products, trial names, and formulary details are invented
-for the demo. The other three tabs (My Day, Suggestions, Customers) are static context
-for the scenario; Ask FELIX is the interactive one.
+All data is fictional — HCPs, products (Pacrivex, Momelyx, Ruxoril), prescription
+counts, and affiliations are invented for the demo. The other five tabs (Overview,
+GeoPlan, Call Prep, Route Planner, HCP Avatar) are placeholders; Ask FELIX is the
+interactive one.
+
+The UI was rebuilt from screenshots of the real product rather than from the live
+site, which was unreachable from the build environment.

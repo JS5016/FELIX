@@ -2,200 +2,191 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FELIX — Ask FELIX</title>
-<meta name="description" content="FELIX field assistant — a voice-driven Ask FELIX experience for pharma field teams." />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Ask FELIX — Veeva CRM</title>
+<meta name="description" content="Ask FELIX — voice agent for pharma field teams, inside Veeva CRM." />
 <link rel="stylesheet" href="assets/styles.css" />
 </head>
 <body>
 
-<div class="app">
+<div class="device">
 
-  <!-- ── Left rail ───────────────────────────────────────────── -->
-  <aside class="rail">
-    <div class="rail-logo" title="FELIX">F</div>
-    <nav class="rail-nav">
-      <button class="rail-btn" data-tab="my-day"      title="My Day">
-        <svg viewBox="0 0 24 24"><path d="M8 2v3M16 2v3M3 9h18M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>
-      </button>
-      <button class="rail-btn is-active" data-tab="ask" title="Ask FELIX">
-        <svg viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 1 4 4v4a4 4 0 0 1-8 0V7a4 4 0 0 1 4-4z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
-      </button>
-      <button class="rail-btn" data-tab="suggestions" title="Suggestions">
-        <svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2z"/><path d="M9 21h6"/></svg>
-      </button>
-      <button class="rail-btn" data-tab="customers"   title="Customers">
-        <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
-      </button>
-    </nav>
-    <div class="rail-user" title="Jordan Ellis">JE</div>
-  </aside>
+  <!-- ── Status bar ─────────────────────────────────────────────── -->
+  <div class="statusbar">
+    <span class="sb-time" id="sb-time">5:21 PM Sat, September 5</span>
+    <span class="sb-title">Veeva CRM</span>
+    <span class="sb-user">JD</span>
+  </div>
 
-  <!-- ── Main ────────────────────────────────────────────────── -->
-  <main class="main">
+  <!-- ── Orange tab bar ─────────────────────────────────────────── -->
+  <nav class="tabbar" role="tablist">
+    <button class="tab" role="tab" data-tab="overview">Overview</button>
+    <button class="tab" role="tab" data-tab="geoplan">GeoPlan</button>
+    <button class="tab" role="tab" data-tab="callprep">Call Prep</button>
+    <button class="tab is-active" role="tab" data-tab="ask">Ask FELIX</button>
+    <button class="tab" role="tab" data-tab="route">Route Planner</button>
+    <button class="tab" role="tab" data-tab="avatar">HCP Avatar</button>
+  </nav>
 
-    <header class="topbar">
-      <div class="brand">
-        <span class="brand-mark">FELIX</span>
-        <span class="brand-by">by ZS</span>
-      </div>
+  <!-- ── Stage ──────────────────────────────────────────────────── -->
+  <div class="stage">
 
-      <div class="tabs" role="tablist">
-        <button class="tab is-active" role="tab" data-tab="ask">Ask FELIX</button>
-        <button class="tab" role="tab" data-tab="my-day">My Day</button>
-        <button class="tab" role="tab" data-tab="suggestions">Suggestions</button>
-        <button class="tab" role="tab" data-tab="customers">Customers</button>
-      </div>
-
-      <div class="topbar-right">
-        <div class="whoami">
-          <span class="whoami-name">Jordan Ellis</span>
-          <span class="whoami-role">Cardiovascular · Northeast</span>
-        </div>
-        <div class="avatar">JE</div>
-      </div>
-    </header>
-
-    <!-- ── Ask FELIX ─────────────────────────────────────────── -->
+    <!-- ══ Ask FELIX ══════════════════════════════════════════════ -->
     <section class="panel is-active" id="panel-ask">
 
-      <div class="ask-head">
-        <div class="ask-title">
-          <h1>Ask FELIX</h1>
-          <p>Talk to FELIX between calls. Ask about nearby customers, active suggestions, or log a visit.</p>
+      <button class="collapse-btn" title="Collapse panel" aria-label="Collapse panel">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16M6.8 9.5 5 12l1.8 2.5"/></svg>
+      </button>
+      <button class="new-btn" id="btn-new" title="New conversation" aria-label="New conversation">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+
+      <div class="ask-scroll" id="ask-scroll">
+
+        <!-- Welcome state -->
+        <div class="welcome" id="welcome">
+          <div class="felix-logo">
+            <svg viewBox="0 0 150 96" class="fox" aria-hidden="true">
+              <defs>
+                <linearGradient id="xa" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#F9B45E"/><stop offset="1" stop-color="#D9520F"/>
+                </linearGradient>
+                <linearGradient id="xb" x1="1" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#F08A34"/><stop offset="1" stop-color="#C13F09"/>
+                </linearGradient>
+                <linearGradient id="fur" x1=".2" y1="0" x2=".8" y2="1">
+                  <stop offset="0" stop-color="#FBB059"/><stop offset=".5" stop-color="#EE7A2A"/><stop offset="1" stop-color="#CE4E10"/>
+                </linearGradient>
+                <linearGradient id="ear" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#E8620F"/><stop offset="1" stop-color="#B93B08"/>
+                </linearGradient>
+              </defs>
+
+              <!-- X -->
+              <path d="M0 13 H18 L64 83 H46 Z" fill="url(#xa)"/>
+              <path d="M46 13 H64 L18 83 H0 Z" fill="url(#xb)" opacity=".9"/>
+
+              <!-- Ears -->
+              <path d="M80 41 L75 8 L100 27 Z"   fill="url(#ear)"/>
+              <path d="M116 29 L130 5 L134 36 Z" fill="url(#ear)"/>
+
+              <!-- Head -->
+              <path d="M80 41 C 87 27, 118 25, 126 37 C 136 55, 125 76, 108 84
+                       C 94 90, 81 79, 77 63 C 74 53, 76 47, 80 41 Z" fill="url(#fur)"/>
+
+              <!-- Muzzle -->
+              <path d="M85 55 C 95 49, 110 49, 118 56 C 115 71, 106 81, 99 83
+                       C 90 79, 84 67, 85 55 Z" fill="#FDF4E6"/>
+
+              <!-- Face -->
+              <ellipse cx="96"  cy="51" rx="3.5" ry="4.6" fill="#3A1B08"/>
+              <ellipse cx="115" cy="50" rx="3.5" ry="4.6" fill="#3A1B08"/>
+              <path d="M101 69 H110 L105.5 75 Z" fill="#3A1B08"/>
+            </svg>
+            <span class="felix-word">FELIX</span>
+          </div>
+
+          <h1 class="welcome-h">Welcome, John</h1>
+          <p class="welcome-p">Type a message, use your mic to dictate, or start a live voice call.</p>
+
+          <div class="starters" id="starters"></div>
         </div>
-        <div class="ask-actions">
-          <button class="ghost-btn" id="btn-voice" aria-pressed="true" title="Toggle FELIX's voice">
-            <svg viewBox="0 0 24 24" class="ico-on"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg>
-            <svg viewBox="0 0 24 24" class="ico-off"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m23 9-6 6M17 9l6 6"/></svg>
-            <span class="ghost-label">Voice on</span>
-          </button>
-          <button class="ghost-btn" id="btn-restart" title="Start the conversation over">
-            <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
-            <span class="ghost-label">Restart</span>
-          </button>
-        </div>
+
+        <!-- Conversation -->
+        <div class="thread" id="thread" aria-live="polite"></div>
       </div>
 
-      <div class="banner" id="banner" hidden></div>
+      <!-- Composer -->
+      <div class="composer-wrap">
+        <form class="composer" id="form" autocomplete="off">
+          <input id="input" type="text" placeholder="Ask FELIX anything…" aria-label="Message FELIX" />
 
-      <div class="thread" id="thread" aria-live="polite"></div>
-
-      <div class="composer">
-        <div class="chips" id="chips"></div>
-
-        <div class="composer-row">
-          <button class="mic" id="mic" aria-label="Hold to talk to FELIX">
-            <span class="mic-ring r1"></span>
-            <span class="mic-ring r2"></span>
-            <span class="mic-ring r3"></span>
-            <svg viewBox="0 0 24 24" class="mic-ico"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8.5 21h7"/></svg>
-            <svg viewBox="0 0 24 24" class="stop-ico"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
+          <button class="cbtn send" type="submit" title="Send" aria-label="Send">
+            <svg viewBox="0 0 24 24"><path d="M4.4 11.3 20 4l-7.3 15.6-2-6.3z"/></svg>
           </button>
 
-          <form class="input-wrap" id="form" autocomplete="off">
-            <input id="input" type="text" placeholder="Tap the mic and speak — or type your question…" aria-label="Message FELIX" />
-            <button class="send" type="submit" aria-label="Send">
-              <svg viewBox="0 0 24 24"><path d="m4 20 16-8L4 4v6l10 2-10 2v6z"/></svg>
+          <span class="cgroup">
+            <button class="cbtn kb is-on" type="button" title="Keyboard" aria-label="Keyboard">
+              <svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
             </button>
-          </form>
-        </div>
+            <button class="cbtn phone" type="button" id="btn-call" title="Start a live voice call" aria-label="Start a live voice call">
+              <svg viewBox="0 0 24 24"><path d="M6.6 3.5h3l1.5 4-2 1.5a12 12 0 0 0 5.9 5.9l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 5.7a2 2 0 0 1 2-2.2z"/></svg>
+            </button>
+          </span>
 
-        <div class="status" id="status">
-          <span class="status-dot"></span>
-          <span class="status-text">Tap the mic to start — try “Hey FELIX, I wrapped up early with Dr. Yuki…”</span>
-        </div>
+          <button class="cbtn mic" type="button" id="btn-dictate" title="Dictate" aria-label="Dictate">
+            <svg viewBox="0 0 24 24"><path d="M12 3.5a2.7 2.7 0 0 1 2.7 2.7v5.4a2.7 2.7 0 0 1-5.4 0V6.2A2.7 2.7 0 0 1 12 3.5z"/><path d="M5.8 11.2a6.2 6.2 0 0 0 12.4 0M12 17.4v3.1"/></svg>
+          </button>
+
+          <button class="cbtn wave" type="button" id="btn-call-2" title="Start a live voice call" aria-label="Start a live voice call">
+            <svg viewBox="0 0 24 24" class="bars"><path d="M5 10v4M9.3 6.5v11M13.7 8.5v7M18 10.5v3"/></svg>
+          </button>
+
+          <button class="cbtn more" type="button" title="More" aria-label="More">
+            <svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18.5" cy="12" r="1.4"/></svg>
+          </button>
+        </form>
+
+        <p class="hint"><kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> for new line</p>
       </div>
     </section>
 
-    <!-- ── My Day ────────────────────────────────────────────── -->
-    <section class="panel" id="panel-my-day">
-      <div class="ask-head"><div class="ask-title">
-        <h1>My Day</h1><p>Tuesday, September 8 · Bayview &amp; Northgate territory loop</p>
-      </div></div>
-      <ol class="day">
-        <li class="day-item is-done">
-          <span class="day-time">9:30</span>
-          <div class="day-body"><strong>Dr. Marcus Bell</strong> — Northgate Cardiovascular, Suite 120
-            <span class="day-note">Completed · call note synced</span></div>
-        </li>
-        <li class="day-item is-done">
-          <span class="day-time">1:52</span>
-          <div class="day-body"><strong>Dr. Hana Yuki</strong> — Bayview Medical Plaza, Suite 310
-            <span class="day-note">Ended 2:14 · call note not yet logged</span></div>
-        </li>
-        <li class="day-item is-now">
-          <span class="day-time">2:18</span>
-          <div class="day-body"><strong>Open window</strong> — 47 minutes free
-            <span class="day-note">2 nearby HCPs with active suggestions · ask FELIX</span></div>
-        </li>
-        <li class="day-item">
-          <span class="day-time">3:30</span>
-          <div class="day-body"><strong>Dr. Elena Sandoval</strong> — Northgate Cardiovascular, Suite 415
-            <span class="day-note">Confirmed · 18 min drive from Bayview</span></div>
-        </li>
-        <li class="day-item">
-          <span class="day-time">4:30</span>
-          <div class="day-body"><strong>Territory wrap-up</strong>
-            <span class="day-note">Review pending call notes and sample reconciliations</span></div>
-        </li>
-      </ol>
-    </section>
+    <!-- ══ Placeholder tabs ═══════════════════════════════════════ -->
+    <section class="panel placeholder" id="panel-overview"><div><h2>Overview</h2><p>Territory summary, attainment, and alerts.</p></div></section>
+    <section class="panel placeholder" id="panel-geoplan"><div><h2>GeoPlan</h2><p>Map of accounts and today’s routing.</p></div></section>
+    <section class="panel placeholder" id="panel-callprep"><div><h2>Call Prep</h2><p>Pre-call briefs for your next visits.</p></div></section>
+    <section class="panel placeholder" id="panel-route"><div><h2>Route Planner</h2><p>Optimised drive order for the day.</p></div></section>
+    <section class="panel placeholder" id="panel-avatar"><div><h2>HCP Avatar</h2><p>Practise a detail against a simulated HCP.</p></div></section>
 
-    <!-- ── Suggestions ───────────────────────────────────────── -->
-    <section class="panel" id="panel-suggestions">
-      <div class="ask-head"><div class="ask-title">
-        <h1>Suggestions</h1><p>Active next-best-actions across your territory, refreshed this morning.</p>
-      </div></div>
-      <div class="sugg-list">
-        <article class="sugg"><span class="pri pri-high">High</span>
-          <h3>Share ODYSSEY-3 12-month outcomes with Dr. Amara Chen</h3>
-          <p>Tier A writer, trending down 12% QoQ. New data published Aug 28; last in-person touch was 41 days ago.</p>
-          <span class="sugg-meta">Bayview Medical Plaza · Suite 402 · expires in 6 days</span></article>
-        <article class="sugg"><span class="pri pri-med">Medium</span>
-          <h3>Confirm Meridian Health formulary win with Dr. Ravi Patel</h3>
-          <p>Two sample requests pending. 60% of his panel is Meridian-covered; the win is effective Oct 1.</p>
-          <span class="sugg-meta">Bayview Medical Plaza · Suite 210 · expires in 12 days</span></article>
-        <article class="sugg"><span class="pri pri-med">Medium</span>
-          <h3>Follow up on payer coverage question — Dr. Hana Yuki</h3>
-          <p>Raised prior-authorization concerns in her last two visits. Payer one-pager approved Sept 2.</p>
-          <span class="sugg-meta">Bayview Medical Plaza · Suite 310 · expires in 9 days</span></article>
-        <article class="sugg"><span class="pri pri-low">Low</span>
-          <h3>Invite Dr. Elena Sandoval to the Oct 14 regional speaker program</h3>
-          <p>Attended two of the last three programs. Seats close Sept 26.</p>
-          <span class="sugg-meta">Northgate Cardiovascular · Suite 415 · expires in 21 days</span></article>
+    <!-- ══ Live voice call overlay ════════════════════════════════ -->
+    <div class="call" id="call" hidden>
+      <div class="orb-wrap">
+        <span class="orb-glow g1"></span>
+        <span class="orb-glow g2"></span>
+        <span class="orb-glow g3"></span>
+        <button class="orb" id="orb" aria-label="Tap to interrupt">
+          <svg viewBox="0 0 24 24" class="orb-speak"><path d="M11 5 6 9H2.6v6H6l5 4z"/><path d="M15.4 8.6a5 5 0 0 1 0 6.8M18.8 5.4a9.4 9.4 0 0 1 0 13.2"/></svg>
+          <svg viewBox="0 0 24 24" class="orb-listen"><path d="M12 3.5a2.7 2.7 0 0 1 2.7 2.7v5.4a2.7 2.7 0 0 1-5.4 0V6.2A2.7 2.7 0 0 1 12 3.5z"/><path d="M5.8 11.2a6.2 6.2 0 0 0 12.4 0M12 17.4v3.1"/></svg>
+        </button>
       </div>
-    </section>
 
-    <!-- ── Customers ─────────────────────────────────────────── -->
-    <section class="panel" id="panel-customers">
-      <div class="ask-head"><div class="ask-title">
-        <h1>Customers</h1><p>HCPs in the Bayview and Northgate buildings.</p>
-      </div></div>
-      <div class="cust-list">
-        <article class="cust"><div class="cust-av">AC</div><div>
-          <strong>Dr. Amara Chen</strong><span>Interventional Cardiology · Tier A</span>
-          <span class="cust-loc">Bayview Medical Plaza · Suite 402</span></div>
-          <span class="pri pri-high">1 suggestion</span></article>
-        <article class="cust"><div class="cust-av">RP</div><div>
-          <strong>Dr. Ravi Patel</strong><span>Internal Medicine · Tier B</span>
-          <span class="cust-loc">Bayview Medical Plaza · Suite 210</span></div>
-          <span class="pri pri-med">1 suggestion</span></article>
-        <article class="cust"><div class="cust-av">HY</div><div>
-          <strong>Dr. Hana Yuki</strong><span>Cardiology · Tier A</span>
-          <span class="cust-loc">Bayview Medical Plaza · Suite 310</span></div>
-          <span class="pri pri-med">1 suggestion</span></article>
-        <article class="cust"><div class="cust-av">ES</div><div>
-          <strong>Dr. Elena Sandoval</strong><span>Electrophysiology · Tier A</span>
-          <span class="cust-loc">Northgate Cardiovascular · Suite 415</span></div>
-          <span class="pri pri-low">1 suggestion</span></article>
+      <h2 class="call-state" id="call-state">Connecting…</h2>
+      <p class="call-sub" id="call-sub">Speak naturally</p>
+
+      <div class="live">
+        <div class="live-head"><span class="live-dot"></span>LIVE TRANSCRIPT</div>
+        <div class="live-box" id="live-box"></div>
       </div>
-    </section>
 
-  </main>
+      <div class="call-controls">
+        <button class="call-mic" id="call-mic" title="Mute" aria-label="Mute">
+          <svg viewBox="0 0 24 24"><path d="M12 3.5a2.7 2.7 0 0 1 2.7 2.7v5.4a2.7 2.7 0 0 1-5.4 0V6.2A2.7 2.7 0 0 1 12 3.5z"/><path d="M5.8 11.2a6.2 6.2 0 0 0 12.4 0M12 17.4v3.1"/></svg>
+        </button>
+        <button class="end-call" id="end-call">
+          <svg viewBox="0 0 24 24"><path d="M12 3.5a2.7 2.7 0 0 1 2.7 2.7v3.1M9.3 9.6v2a2.7 2.7 0 0 0 4.2 2.2"/><path d="M5.8 11.2a6.2 6.2 0 0 0 9.2 5.4M12 17.4v3.1"/><path d="m3.5 3 17 18"/></svg>
+          End Conversation
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Bottom nav ─────────────────────────────────────────────── -->
+  <nav class="bottomnav">
+    <button><svg viewBox="0 0 24 24"><path d="m9 4-6 2.4v13.2L9 17l6 2.6 6-2.4V4l-6 2.4z"/><path d="M9 4v13M15 6.6v13"/></svg><span>GeoPlan</span></button>
+    <button><svg viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.8 12.3v7.2h12.4v-7.2"/></svg><span>Home</span></button>
+    <button><svg viewBox="0 0 24 24"><circle cx="9.5" cy="8" r="3.2"/><path d="M3.6 19.5a6 6 0 0 1 11.8 0"/><circle cx="17" cy="8.8" r="2.4"/><path d="M16.2 14.2a5 5 0 0 1 4.2 5.3"/></svg><span>My Accou…</span></button>
+    <button><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8.5 3v4M15.5 3v4"/></svg><span>My Sched…</span></button>
+    <button><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.8"/><path d="m10.2 8.6 5.4 3.4-5.4 3.4z"/></svg><span>Media</span></button>
+    <button><svg viewBox="0 0 24 24"><rect x="2.8" y="5.4" width="18.4" height="13.2" rx="2.4"/><path d="m3.4 7 8.6 6 8.6-6"/></svg><span>Email</span></button>
+    <button><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>EM Events</span></button>
+    <button><svg viewBox="0 0 24 24"><path d="M6 3.2h8.5L19 7.8v13H6z"/><path d="M14 3.4v4.6h4.6M9 12.5h6M9 16h6"/></svg><span>Coaching …</span></button>
+    <button><svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18.5" cy="12" r="1.5"/></svg><span>More</span></button>
+  </nav>
+
+  <button class="dismiss" title="Close" aria-label="Close">
+    <svg viewBox="0 0 24 24"><path d="m5.5 5.5 13 13M18.5 5.5l-13 13"/></svg>
+  </button>
 </div>
 
 <script src="assets/script-data.js"></script>
