@@ -156,12 +156,47 @@ the orb, `onMessage` fills the transcript, `getInputVolume()` scales the orb, an
 credential is ever in the page. If the SDK cannot load, the call falls back to the
 scripted voice with a visible banner.
 
-**OpenAI** uses `POST /v1/chat/completions` for typed turns (`assets/brain.js`, keeping
-the last 16 messages), `POST /v1/audio/speech` with `gpt-4o-mini-tts` for the voice, and
-for a live call mints an ephemeral token at `POST /v1/realtime/client_secrets` then
-exchanges SDP at `POST /v1/realtime/calls` over WebRTC. Endpoints and model names were
-taken from `openai` 7.10.0 — note the older `/realtime/sessions` beta endpoint no longer
-connects.
+**OpenAI** uses `POST /v1/chat/completions` for typed turns (`assets/brain.js`), `POST
+/v1/audio/speech` with `gpt-4o-mini-tts` for the voice, and for a live call mints an
+ephemeral token at `POST /v1/realtime/client_secrets` then exchanges SDP at `POST
+/v1/realtime/calls` over WebRTC. Endpoints and model names were taken from `openai`
+7.10.0 — note the older `/realtime/sessions` beta endpoint no longer connects.
+
+### Realtime session
+
+| Setting | Value |
+| --- | --- |
+| Model | `gpt-realtime-2.1` (also 2.1-mini, 2, and plain `gpt-realtime`) |
+| Voice | Marin or Cedar (all ten available) |
+| Turn detection | `semantic_vad`, `eagerness: medium` |
+| Interruptions | `interrupt_response: true` — talk over FELIX and he stops |
+| Input | rep microphone via `getUserMedia` |
+| Live transcript | `gpt-4o-mini-transcribe` on the input, agent transcript from the output |
+| Instructions | the FELIX persona in `assets/persona.js` |
+| Tools | the six below, `tool_choice: auto` |
+
+## Tools
+
+`assets/tools.js` defines six function tools and executes them locally against a
+structured territory dataset. Both free-form engines share them, so a typed question
+and a spoken one have identical capability.
+
+| Tool | What it returns |
+| --- | --- |
+| `hcp_profile` | Specialty, segment, location, Pacrivex vs competitor volumes, last touch |
+| `call_prep` | Why now, ordered talking points, approved materials, compliance note |
+| `barrier_lookup` | Known objections, how often raised, whether open, the approved evidence |
+| `next_best_action` | One HCP's active suggestion, or the ranked territory list (`nearby_only`) |
+| `territory_insights` | 30-day behaviour change and everyone not contacted in 4+ weeks |
+| `crm_notes` | Read past notes, draft a new one, or file it after the rep approves |
+
+In a call the model emits `response.function_call_arguments.done`; the tool runs and the
+result goes back as `conversation.item.create` / `function_call_output` followed by
+`response.create`. In chat it is the standard `tool_calls` loop, capped at four rounds.
+Tool use is visible either way — badges on the answer, a chip in the live transcript.
+
+Swapping the `TERRITORY` object for real API calls is the only change needed to make
+these hit a live CRM.
 
 ## Files
 
@@ -169,6 +204,7 @@ connects.
 index.html              Veeva shell, tabs, welcome / chat / call views, settings sheet
 assets/styles.css       light orange theme and components
 assets/persona.js       who FELIX is — shared by every free-form engine
+assets/tools.js         the six tools + local executor over the territory data
 assets/script-data.js   the scripted conversation — edit this to change the demo
 assets/brain.js         OpenAI chat completions
 assets/voice.js         engines: browser, ElevenLabs TTS/agent, OpenAI TTS/realtime

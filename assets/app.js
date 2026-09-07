@@ -233,6 +233,31 @@
     return wrap;
   }
 
+  const TOOL_LABELS = {
+    hcp_profile: 'HCP profile',
+    call_prep: 'Call prep',
+    barrier_lookup: 'Barrier lookup',
+    next_best_action: 'Next-best-action',
+    territory_insights: 'Territory insights',
+    crm_notes: 'CRM notes'
+  };
+
+  const toolLabel = n => TOOL_LABELS[n] || n;
+
+  /* Small chips after the FELIX label showing which tools answered the turn. */
+  function toolBadges(list) {
+    const wrap = document.createElement('span');
+    wrap.className = 'tool-badges';
+    list.forEach(t => {
+      const b = document.createElement('span');
+      b.className = 'tool-badge';
+      b.textContent = toolLabel(t.name);
+      b.title = JSON.stringify(t.args || {});
+      wrap.appendChild(b);
+    });
+    return wrap;
+  }
+
   /* Starter pills on the welcome screen. */
   SCRIPT.starters.forEach(text => {
     const b = document.createElement('button');
@@ -311,10 +336,13 @@
     const ghost = thinking();
 
     if (Voice.freeForm()) {
-      window.FelixBrain.ask(clean, Voice.config()).then(text => {
+      const toolChips = [];
+      window.FelixBrain.ask(clean, Voice.config(), (name, args) => toolChips.push({ name, args }))
+      .then(r => {
         ghost.remove();
-        addMessage('felix', text, []);
-        speak(text);
+        const msg = addMessage('felix', r.text, []);
+        if (toolChips.length) msg.querySelector('.msg-who').appendChild(toolBadges(toolChips));
+        speak(r.text);
         state.busy = false;
       }).catch(err => {
         ghost.remove();
@@ -636,6 +664,16 @@
         if (state.mode !== 'call' || !text) return;
         liveTurn(role === 'user' ? 'you' : 'agent', text);
       },
+      onTool: (name, args) => {
+        if (state.mode !== 'call') return;
+        const row = document.createElement('div');
+        row.className = 'live-tool';
+        row.innerHTML = '<svg viewBox="0 0 24 24"><path d="M14.5 6.5a3.9 3.9 0 0 0 5 5l-7 7a3.9 3.9 0 0 1-5-5z"/><path d="m5 19 1.5-1.5"/></svg>';
+        row.appendChild(document.createTextNode(
+          toolLabel(name) + (args && (args.hcp || args.focus) ? ' · ' + (args.hcp || args.focus) : '')));
+        el.liveBox.appendChild(row);
+        el.liveBox.scrollTop = el.liveBox.scrollHeight;
+      },
       onLevel: v => el.call.style.setProperty('--level', String(v || 0)),
       onError: msg => showBanner('OpenAI realtime: ' + msg)
     };
@@ -751,7 +789,7 @@
 
   Voice.OA_VOICES.forEach(v => {
     const o = document.createElement('option');
-    o.value = v; o.textContent = v;
+    o.value = v.id; o.textContent = v.name;
     oaVoice.appendChild(o);
   });
 

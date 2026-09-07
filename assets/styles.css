@@ -645,3 +645,23 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
   font-size: 12px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .08em;
 }
 .good-note { background: #EDFAF2; border-left-color: var(--green); color: #16653C; }
+
+/* ── Tool activity ──────────────────────────────────────────────── */
+
+.tool-badges { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: 10px; vertical-align: 1px; }
+.tool-badge {
+  padding: 3px 9px; border-radius: 999px;
+  background: var(--hi-bg); color: var(--hi);
+  font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+}
+
+.live-tool {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 12px; padding: 8px 13px;
+  border-radius: 999px;
+  background: var(--hi-bg); color: var(--hi);
+  font-size: 13px; font-weight: 600;
+  width: fit-content;
+  animation: rise .24s ease both;
+}
+.live-tool svg { width: 15px; height: 15px; stroke-width: 2; }

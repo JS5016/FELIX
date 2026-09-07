@@ -35,7 +35,13 @@
   ];
 
   /* Verified against openai-node 7.10.0. */
-  const OA_VOICES = ['marin', 'cedar', 'alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse'];
+  const OA_VOICES = [
+    { id: 'marin', name: 'Marin — recommended' },
+    { id: 'cedar', name: 'Cedar — recommended' },
+    { id: 'alloy', name: 'Alloy' }, { id: 'ash', name: 'Ash' }, { id: 'ballad', name: 'Ballad' },
+    { id: 'coral', name: 'Coral' }, { id: 'echo', name: 'Echo' }, { id: 'sage', name: 'Sage' },
+    { id: 'shimmer', name: 'Shimmer' }, { id: 'verse', name: 'Verse' }
+  ];
 
   const DEFAULTS = {
     engine: 'browser',
@@ -311,6 +317,9 @@
    *   POST /v1/realtime/client_secrets  -> { value: "ek_..." }   (ephemeral)
    *   POST /v1/realtime/calls           -> SDP answer            (multipart)
    * The older /realtime/sessions beta endpoint no longer connects.
+   *
+   * Session: semantic VAD with interrupt_response, input transcription on for
+   * the live transcript, and the six FELIX tools from assets/tools.js.
    * ------------------------------------------------------------------ */
 
   let pc = null, dc = null, rtAudio = null, rtStream = null, rtLevel = null;
@@ -321,9 +330,19 @@
       model: cfg.realtimeModel,
       instructions: window.FELIX_PERSONA.systemPrompt,
       audio: {
-        input: { transcription: { model: 'gpt-4o-mini-transcribe' } },
+        input: {
+          transcription: { model: 'gpt-4o-mini-transcribe' },   // drives the live transcript
+          turn_detection: {
+            type: 'semantic_vad',       // waits for a finished thought, not just silence
+            eagerness: 'medium',
+            create_response: true,
+            interrupt_response: true    // talking over FELIX cuts him off
+          }
+        },
         output: { voice: cfg.oaVoice }
-      }
+      },
+      tools: window.FelixTools.realtimeTools(),
+      tool_choice: 'auto'
     };
 
     // With a proxy the key stays server-side; the proxy mints and returns the token.
@@ -406,10 +425,29 @@
     if (type === 'conversation.item.input_audio_transcription.completed' && m.transcript) {
       if (h.onMessage) h.onMessage('user', m.transcript);
     }
+    // The model asked for a tool. Run it locally and hand the result back.
+    if (type === 'response.function_call_arguments.done') {
+      const args = window.FelixTools.parseArgs(m.arguments);
+      const result = window.FelixTools.run(m.name, args);
+      if (h.onTool) h.onTool(m.name, args, result);
+      sendToolResult(m.call_id, result);
+    }
+
     if (type === 'error') {
       const msg = (m.error && m.error.message) || 'Realtime error';
       if (h.onError) h.onError(msg);
     }
+  }
+
+  /* conversation.item.create(function_call_output) then response.create,
+   * so the model speaks its answer using the tool output. */
+  function sendToolResult(callId, result) {
+    if (!dc || dc.readyState !== 'open') return;
+    dc.send(JSON.stringify({
+      type: 'conversation.item.create',
+      item: { type: 'function_call_output', call_id: callId, output: JSON.stringify(result) }
+    }));
+    dc.send(JSON.stringify({ type: 'response.create' }));
   }
 
   function startRtLevel(onLevel) {

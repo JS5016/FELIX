@@ -12,6 +12,7 @@ const safe = s => s.replace(/<\/script/gi, '<\\/script');
 const SCRIPTS = [
   'assets/script-data.js',
   'assets/persona.js',
+  'assets/tools.js',
   'assets/brain.js',
   'assets/voice.js',
   'assets/app.js',
