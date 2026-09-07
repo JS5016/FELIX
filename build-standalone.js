@@ -9,19 +9,18 @@ const read = p => fs.readFileSync(path.join(__dirname, p), 'utf8');
 // Escaping "</script" keeps an inlined string from closing the tag early.
 const safe = s => s.replace(/<\/script/gi, '<\\/script');
 
-const html = read('index.html')
-  .replace(
-    '<link rel="stylesheet" href="assets/styles.css" />',
-    '<style>\n' + read('assets/styles.css') + '\n</style>'
-  )
-  .replace(
-    '<script src="assets/script-data.js"></script>',
-    '<script>\n' + safe(read('assets/script-data.js')) + '\n</script>'
-  )
-  .replace(
-    '<script src="assets/app.js"></script>',
-    '<script>\n' + safe(read('assets/app.js')) + '\n</script>'
-  );
+const SCRIPTS = ['assets/script-data.js', 'assets/voice.js', 'assets/app.js'];
+
+let html = read('index.html').replace(
+  '<link rel="stylesheet" href="assets/styles.css" />',
+  '<style>\n' + read('assets/styles.css') + '\n</style>'
+);
+
+for (const src of SCRIPTS) {
+  const tag = `<script src="${src}"></script>`;
+  if (!html.includes(tag)) throw new Error(`index.html has no <script> tag for ${src}`);
+  html = html.replace(tag, '<script>\n' + safe(read(src)) + '\n</script>');
+}
 
 // Only a surviving href/src matters; the word "assets/" inside a code comment is fine.
 if (/(?:href|src)\s*=\s*["']assets\//i.test(html)) {

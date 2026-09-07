@@ -556,6 +556,98 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
   .card, .callout { opacity: 1; transform: none; }
 }
 
+/* ── Settings sheet ─────────────────────────────────────────────── */
+
+.gear-btn {
+  position: absolute; top: 16px; right: 70px; z-index: 4;
+  width: 40px; height: 40px; border: 0; border-radius: 50%;
+  background: #EEF1F6; color: var(--ink-2);
+  display: grid; place-items: center; cursor: pointer;
+}
+.gear-btn:hover { background: #E3E8F0; color: var(--ink); }
+.gear-btn svg { width: 19px; height: 19px; }
+.gear-btn.is-live { background: var(--hi-bg); color: var(--hi); }
+
+.sheet-wrap { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; }
+.sheet-wrap[hidden] { display: none; }
+.sheet-backdrop { position: absolute; inset: 0; background: rgba(20,16,12,.42); animation: fade .18s ease both; }
+
+.sheet {
+  position: relative;
+  width: min(560px, calc(100% - 32px));
+  max-height: calc(100% - 48px);
+  display: flex; flex-direction: column;
+  background: var(--card);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(20,16,12,.3);
+  animation: pop .2s ease both;
+}
+@keyframes pop { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+
+.sheet-head { display: flex; align-items: center; padding: 20px 22px 12px; }
+.sheet-head h2 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -.01em; }
+.sheet-x {
+  margin-left: auto; width: 34px; height: 34px; border: 0; border-radius: 50%;
+  background: #F1EEEA; color: var(--ink-2); cursor: pointer; display: grid; place-items: center;
+}
+.sheet-x svg { width: 16px; height: 16px; stroke-width: 2.2; }
+
+.sheet-body { padding: 0 22px 8px; overflow-y: auto; }
+
+.opt { display: flex; gap: 12px; padding: 13px; border-radius: 14px; cursor: pointer; transition: background .15s; }
+.opt:hover { background: #FAF7F3; }
+.opt input { margin: 3px 0 0; accent-color: var(--o); width: 18px; height: 18px; flex: none; }
+.opt-body { display: block; }
+.opt-body strong { display: block; font-size: 15.5px; font-weight: 600; margin-bottom: 3px; }
+.opt-body em { font-style: normal; font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
+
+.badge {
+  display: inline-block; margin-left: 7px; padding: 2px 8px; border-radius: 999px;
+  background: var(--hi-bg); color: var(--hi);
+  font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  vertical-align: 2px;
+}
+
+.opt-fields { display: none; padding: 4px 13px 14px 43px; }
+.opt-fields.is-open { display: block; }
+.fld { display: block; margin-bottom: 12px; }
+.fld span { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 5px; }
+.fld input, .fld select {
+  width: 100%; padding: 10px 13px;
+  border: 1px solid var(--line); border-radius: 11px;
+  background: #FAF8F5; color: var(--ink);
+  font: 400 14.5px -apple-system, system-ui, sans-serif;
+  outline: none;
+}
+.fld input:focus, .fld select:focus { border-color: var(--o); background: #fff; }
+
+.warn-note {
+  margin: 0; padding: 11px 13px;
+  border-radius: 11px; background: var(--md-bg); border-left: 3px solid var(--md);
+  font-size: 12.5px; line-height: 1.55; color: #7A5A10;
+}
+.warn-note code { background: rgba(0,0,0,.06); padding: 1px 5px; border-radius: 4px; }
+
+.sheet-msg { margin: 4px 0 8px; padding: 11px 14px; border-radius: 11px; font-size: 13.5px; }
+.sheet-msg[hidden] { display: none; }
+.sheet-msg.ok  { background: #EDFAF2; color: #16653C; }
+.sheet-msg.bad { background: #FDECEC; color: #A32020; }
+
+.sheet-foot { display: flex; gap: 10px; justify-content: flex-end; padding: 12px 22px 20px; }
+.btn-ghost, .btn-primary {
+  padding: 11px 20px; border-radius: 999px; cursor: pointer;
+  font: 600 14.5px -apple-system, system-ui, sans-serif;
+  border: 1px solid var(--line); background: #F5F2EE; color: var(--ink-2);
+}
+.btn-ghost:hover { background: #EBE7E2; color: var(--ink); }
+.btn-primary { border-color: transparent; background: var(--o); color: #fff; }
+.btn-primary:hover { background: var(--o-deep); }
+
+@media (max-width: 820px) {
+  .gear-btn { right: 66px; width: 36px; height: 36px; }
+  .opt-fields { padding-left: 20px; }
+}
+
 </style>
 </head>
 <body>
@@ -590,6 +682,9 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
       </button>
       <button class="new-btn" id="btn-new" title="New conversation" aria-label="New conversation">
         <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button class="gear-btn" id="btn-settings" title="Voice settings" aria-label="Voice settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5v.2a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>
       </button>
 
       <div class="ask-scroll" id="ask-scroll">
@@ -734,6 +829,81 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
     <button><svg viewBox="0 0 24 24"><path d="M6 3.2h8.5L19 7.8v13H6z"/><path d="M14 3.4v4.6h4.6M9 12.5h6M9 16h6"/></svg><span>Coaching …</span></button>
     <button><svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18.5" cy="12" r="1.5"/></svg><span>More</span></button>
   </nav>
+
+  <!-- ── Voice settings ─────────────────────────────────────────── -->
+  <div class="sheet-wrap" id="settings" hidden>
+    <div class="sheet-backdrop" data-close></div>
+    <div class="sheet" role="dialog" aria-label="Voice settings">
+      <header class="sheet-head">
+        <h2>Voice</h2>
+        <button class="sheet-x" data-close aria-label="Close">
+          <svg viewBox="0 0 24 24"><path d="m5.5 5.5 13 13M18.5 5.5l-13 13"/></svg>
+        </button>
+      </header>
+
+      <div class="sheet-body">
+
+        <label class="opt">
+          <input type="radio" name="engine" value="browser" />
+          <span class="opt-body">
+            <strong>Browser voice</strong>
+            <em>Works everywhere with no setup. Robotic, and turn taking is basic.</em>
+          </span>
+        </label>
+
+        <label class="opt">
+          <input type="radio" name="engine" value="elevenlabs" />
+          <span class="opt-body">
+            <strong>ElevenLabs voice</strong>
+            <em>FELIX keeps the scripted answers, but speaks with a natural ElevenLabs voice.</em>
+          </span>
+        </label>
+
+        <div class="opt-fields" data-for="elevenlabs">
+          <label class="fld">
+            <span>API key</span>
+            <input type="password" id="el-key" placeholder="sk_…" autocomplete="off" spellcheck="false" />
+          </label>
+          <label class="fld">
+            <span>Voice</span>
+            <select id="el-voice"></select>
+          </label>
+          <label class="fld">
+            <span>Model</span>
+            <select id="el-model">
+              <option value="eleven_flash_v2_5">Flash v2.5 — lowest latency (~75 ms)</option>
+              <option value="eleven_turbo_v2_5">Turbo v2.5 — balanced (~250 ms)</option>
+              <option value="eleven_multilingual_v2">Multilingual v2 — highest quality</option>
+            </select>
+          </label>
+          <p class="warn-note">The key is stored in this browser and sent straight to ElevenLabs from the page. Fine for a local demo — don’t put a production key into a publicly shared link.</p>
+        </div>
+
+        <label class="opt">
+          <input type="radio" name="engine" value="agent" />
+          <span class="opt-body">
+            <strong>ElevenLabs agent <span class="badge">most conversational</span></strong>
+            <em>A real voice agent — its own LLM, speech recognition and natural interruption. Answers freely instead of following the script.</em>
+          </span>
+        </label>
+
+        <div class="opt-fields" data-for="agent">
+          <label class="fld">
+            <span>Agent ID</span>
+            <input type="text" id="el-agent" placeholder="agent_…" autocomplete="off" spellcheck="false" />
+          </label>
+          <p class="warn-note">Create an agent at elevenlabs.io, set it <strong>public</strong> (authentication disabled), and paste its ID. No API key is needed or stored. Use the prompt in <code>AGENT-PROMPT.md</code> so it answers as FELIX.</p>
+        </div>
+
+        <div class="sheet-msg" id="sheet-msg" hidden></div>
+      </div>
+
+      <footer class="sheet-foot">
+        <button class="btn-ghost" id="btn-test">Test voice</button>
+        <button class="btn-primary" id="btn-save">Save</button>
+      </footer>
+    </div>
+  </div>
 
   <button class="dismiss" title="Close" aria-label="Close">
     <svg viewBox="0 0 24 24"><path d="m5.5 5.5 13 13M18.5 5.5l-13 13"/></svg>
@@ -1300,6 +1470,262 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
 </script>
 <script>
 /* ============================================================================
+ * FELIX — voice layer
+ * ----------------------------------------------------------------------------
+ * Three engines, chosen at runtime from the settings panel and remembered in
+ * localStorage. Nothing here is committed with credentials.
+ *
+ *   'browser'     speechSynthesis + SpeechRecognition. Zero setup, robotic.
+ *                 The default, so a plain deployment still works.
+ *
+ *   'elevenlabs'  FELIX still follows the scripted answers, but the voice is
+ *                 ElevenLabs TTS. Needs an API key, which stays in the browser
+ *                 — local/demo use only.
+ *
+ *   'agent'       A real ElevenLabs agent (LLM + STT + TTS + turn taking).
+ *                 The script is not used at all; the agent answers freely and
+ *                 handles interruption natively. Needs a PUBLIC agent id —
+ *                 no key in the page.
+ *
+ * SDK: @elevenlabs/client 1.25.0, IIFE build, loaded on demand.
+ *   ElevenLabsClient.Conversation.startSession({ agentId, connectionType, ...callbacks })
+ *   → { endSession, setMicMuted, setVolume, getInputVolume, getOutputVolume }
+ * ==========================================================================*/
+(function () {
+  'use strict';
+
+  const SDK_URL = 'https://unpkg.com/@elevenlabs/client@1.25.0/dist/lib.iife.js';
+  const TTS_URL = 'https://api.elevenlabs.io/v1/text-to-speech/';
+  const STORE   = 'felix.voice.config';
+
+  const VOICES = [
+    { id: 'XB0fDUnXU5powFXDhCwa', name: 'Charlotte — conversational' },
+    { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah — soft' },
+    { id: 'JBFqnCBsd6RMkjVDRZzb', name: 'George — narrative' },
+    { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel — authoritative' }
+  ];
+
+  const DEFAULTS = {
+    engine: 'browser',
+    apiKey: '',
+    voiceId: VOICES[0].id,
+    modelId: 'eleven_flash_v2_5',   // ~75 ms; turbo_v2_5 trades latency for polish
+    agentId: ''
+  };
+
+  /* ── Config ─────────────────────────────────────────────────────── */
+
+  let cfg = Object.assign({}, DEFAULTS);
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE) || '{}');
+    cfg = Object.assign(cfg, saved);
+  } catch (_) {}
+
+  function setConfig(patch) {
+    cfg = Object.assign(cfg, patch);
+    try { localStorage.setItem(STORE, JSON.stringify(cfg)); } catch (_) {}
+    return cfg;
+  }
+
+  /* An engine only counts as selected if it has what it needs. */
+  function engine() {
+    if (cfg.engine === 'agent' && cfg.agentId) return 'agent';
+    if (cfg.engine === 'elevenlabs' && cfg.apiKey) return 'elevenlabs';
+    return 'browser';
+  }
+
+  /* ── Browser speech synthesis ───────────────────────────────────── */
+
+  const tts = window.speechSynthesis;
+  let browserVoice = null;
+
+  function pickBrowserVoice() {
+    if (!tts) return;
+    const vs = tts.getVoices();
+    if (!vs.length) return;
+    const prefer = ['Samantha', 'Google US English',
+      'Microsoft Aria Online (Natural) - English (United States)',
+      'Microsoft Jenny Online (Natural) - English (United States)', 'Karen'];
+    browserVoice = prefer.map(n => vs.find(v => v.name === n)).find(Boolean)
+      || vs.find(v => /^en[-_]US/i.test(v.lang))
+      || vs.find(v => /^en/i.test(v.lang)) || vs[0];
+  }
+  if (tts) { pickBrowserVoice(); tts.addEventListener('voiceschanged', pickBrowserVoice); }
+
+  function speakBrowser(text, onStart, onDone) {
+    if (!tts) { if (onStart) onStart(); if (onDone) onDone(); return; }
+    const u = new SpeechSynthesisUtterance(text);
+    if (browserVoice) u.voice = browserVoice;
+    u.rate = 1.02; u.pitch = 1;
+    u.lang = (browserVoice && browserVoice.lang) || 'en-US';
+
+    let done = false;
+    const finish = () => { if (!done) { done = true; if (onDone) onDone(); } };
+    u.onstart = () => { if (onStart) onStart(); };
+    u.onend = finish;
+    u.onerror = finish;
+    setTimeout(() => tts.speak(u), 60);
+  }
+
+  /* ── ElevenLabs text to speech ──────────────────────────────────── */
+
+  let audioEl = null;
+  const ttsCache = new Map();   // repeated lines cost nothing the second time
+
+  async function fetchSpeech(text) {
+    if (ttsCache.has(text)) return ttsCache.get(text);
+
+    const res = await fetch(TTS_URL + encodeURIComponent(cfg.voiceId) + '?output_format=mp3_44100_128', {
+      method: 'POST',
+      headers: { 'xi-api-key': cfg.apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: text,
+        model_id: cfg.modelId,
+        voice_settings: { stability: 0.4, similarity_boost: 0.75, style: 0.25, use_speaker_boost: true, speed: 1.03 }
+      })
+    });
+
+    if (!res.ok) {
+      let detail = res.status + ' ' + res.statusText;
+      try {
+        const j = await res.json();
+        if (j && j.detail) detail = j.detail.message || j.detail.status || JSON.stringify(j.detail);
+      } catch (_) {}
+      throw new Error(detail);
+    }
+
+    const url = URL.createObjectURL(await res.blob());
+    if (ttsCache.size < 40) ttsCache.set(text, url);
+    return url;
+  }
+
+  function speakEleven(text, onStart, onDone, onFail) {
+    fetchSpeech(text).then(url => {
+      audioEl = new Audio(url);
+      audioEl.onplay = () => { if (onStart) onStart(); };
+      audioEl.onended = () => { if (onDone) onDone(); };
+      audioEl.onerror = () => { if (onDone) onDone(); };
+      return audioEl.play();
+    }).catch(err => {
+      // Fall back rather than leaving the turn silent.
+      if (onFail) onFail(err);
+      speakBrowser(text, onStart, onDone);
+    });
+  }
+
+  /* ── Public speak / cancel ──────────────────────────────────────── */
+
+  function speak(text, opts) {
+    opts = opts || {};
+    cancel();
+    if (!text) { if (opts.onDone) opts.onDone(); return; }
+
+    if (engine() === 'elevenlabs') speakEleven(text, opts.onStart, opts.onDone, opts.onError);
+    else speakBrowser(text, opts.onStart, opts.onDone);
+  }
+
+  function cancel() {
+    if (tts && (tts.speaking || tts.pending)) tts.cancel();
+    if (audioEl) {
+      audioEl.onended = null; audioEl.onerror = null;
+      try { audioEl.pause(); } catch (_) {}
+      audioEl = null;
+    }
+  }
+
+  /* ── ElevenLabs agent ───────────────────────────────────────────── */
+
+  let sdkPromise = null;
+
+  function loadSDK() {
+    if (window.ElevenLabsClient) return Promise.resolve(window.ElevenLabsClient);
+    if (sdkPromise) return sdkPromise;
+
+    sdkPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = SDK_URL;
+      s.async = true;
+      s.onload = () => window.ElevenLabsClient
+        ? resolve(window.ElevenLabsClient)
+        : reject(new Error('ElevenLabs SDK loaded but exposed no global'));
+      s.onerror = () => reject(new Error('Could not load the ElevenLabs SDK — check the network'));
+      document.head.appendChild(s);
+    });
+    return sdkPromise;
+  }
+
+  let session = null;
+  let levelFrame = null;
+
+  /* handlers: onStatus, onMode, onMessage(role,text), onError, onLevel */
+  async function agentStart(handlers) {
+    const h = handlers || {};
+    const SDK = await loadSDK();
+
+    session = await SDK.Conversation.startSession({
+      agentId: cfg.agentId,
+      connectionType: 'webrtc',
+      onConnect: () => { if (h.onStatus) h.onStatus('connected'); },
+      onDisconnect: () => { stopLevel(); session = null; if (h.onStatus) h.onStatus('disconnected'); },
+      onStatusChange: p => { if (h.onStatus) h.onStatus(p.status); },
+      onModeChange: p => { if (h.onMode) h.onMode(p.mode); },          // 'speaking' | 'listening'
+      onMessage: p => { if (h.onMessage) h.onMessage(p.role || (p.source === 'ai' ? 'agent' : 'user'), p.message); },
+      onError: (msg, ctx) => { if (h.onError) h.onError(msg, ctx); }
+    });
+
+    if (h.onLevel) {
+      (function loop() {
+        if (!session) return;
+        let v = 0;
+        try { v = session.getInputVolume(); } catch (_) {}
+        h.onLevel(v);
+        levelFrame = requestAnimationFrame(loop);
+      })();
+    }
+    return session;
+  }
+
+  function stopLevel() {
+    if (levelFrame) cancelAnimationFrame(levelFrame);
+    levelFrame = null;
+  }
+
+  async function agentStop() {
+    stopLevel();
+    if (!session) return;
+    const s = session;
+    session = null;
+    try { await s.endSession(); } catch (_) {}
+  }
+
+  function agentMute(muted) {
+    if (session && session.setMicMuted) { try { session.setMicMuted(muted); } catch (_) {} }
+  }
+
+  const agentActive = () => !!session;
+
+  /* ── Export ─────────────────────────────────────────────────────── */
+
+  window.FelixVoice = {
+    VOICES,
+    config: () => Object.assign({}, cfg),
+    setConfig,
+    engine,
+    speak,
+    cancel,
+    agent: { start: agentStart, stop: agentStop, mute: agentMute, active: agentActive },
+    /* Used by the settings panel's Test button. */
+    test(text) {
+      return new Promise((resolve, reject) => {
+        speak(text, { onDone: resolve, onError: reject });
+      });
+    }
+  };
+})();
+
+</script>
+<script>
+/* ============================================================================
  * Ask FELIX — voice agent
  * ----------------------------------------------------------------------------
  * No backend, no API keys.
@@ -1345,7 +1771,8 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
     speaking: false,
     listening: false,
     muted: false,
-    dictating: false
+    dictating: false,
+    agentMode: false
   };
 
   /* ── Clock ──────────────────────────────────────────────────────── */
@@ -1633,61 +2060,36 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
     el.input.value = '';
   });
 
-  /* ── Text to speech ─────────────────────────────────────────────── */
+  /* ── Speech (delegated to assets/voice.js) ─────────────────────── */
 
-  const tts = window.speechSynthesis;
-  let voice = null;
-
-  function pickVoice() {
-    if (!tts) return;
-    const vs = tts.getVoices();
-    if (!vs.length) return;
-    const prefer = ['Samantha', 'Google US English',
-      'Microsoft Aria Online (Natural) - English (United States)',
-      'Microsoft Jenny Online (Natural) - English (United States)', 'Karen'];
-    voice = prefer.map(n => vs.find(v => v.name === n)).find(Boolean)
-         || vs.find(v => /^en[-_]US/i.test(v.lang))
-         || vs.find(v => /^en/i.test(v.lang)) || vs[0];
-  }
-  if (tts) { pickVoice(); tts.addEventListener('voiceschanged', pickVoice); }
+  const Voice = window.FelixVoice;
 
   function cancelSpeech() {
-    if (tts && (tts.speaking || tts.pending)) tts.cancel();
+    Voice.cancel();
     state.speaking = false;
     el.call.classList.remove('is-speaking');
   }
 
-  /* onDone fires when speech finishes (or immediately if TTS is unavailable). */
+  /* onDone fires when the line finishes, which is what drives turn taking. */
   function speak(text, onDone) {
-    if (!tts || !text) { if (onDone) onDone(); return; }
+    if (!text) { if (onDone) onDone(); return; }
     cancelSpeech();
-
-    const u = new SpeechSynthesisUtterance(text);
-    if (voice) u.voice = voice;
-    u.rate = 1.02; u.pitch = 1;
-    u.lang = (voice && voice.lang) || 'en-US';
-
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      state.speaking = false;
-      el.call.classList.remove('is-speaking');
-      if (onDone) onDone();
-    };
-
-    u.onstart = () => {
-      state.speaking = true;
-      if (state.mode === 'call') {
-        el.call.classList.add('is-speaking');
-        el.call.classList.remove('is-listening');
-        setCallState('Agent is speaking…', 'Speak naturally');
-      }
-    };
-    u.onend = finish;
-    u.onerror = finish;
-
-    setTimeout(() => tts.speak(u), 60);
+    Voice.speak(text, {
+      onStart: () => {
+        state.speaking = true;
+        if (state.mode === 'call') {
+          el.call.classList.remove('is-listening');
+          el.call.classList.add('is-speaking');
+          setCallState('Agent is speaking…', 'Speak naturally');
+        }
+      },
+      onDone: () => {
+        state.speaking = false;
+        el.call.classList.remove('is-speaking');
+        if (onDone) onDone();
+      },
+      onError: err => showBanner('ElevenLabs voice failed (' + err.message + ') — falling back to the browser voice.')
+    });
   }
 
   /* ── Speech recognition ─────────────────────────────────────────── */
@@ -1789,15 +2191,73 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
     el.callMic.classList.remove('is-muted');
     el.liveBox.innerHTML = '';
     el.call.hidden = false;
-    setCallState('Connecting…', 'Speak naturally');
+    setCallState('Connecting\u2026', 'Speak naturally');
 
-    if (!SR) showBanner('This browser can’t listen — speech recognition needs Chrome, Edge, or Safari. FELIX will still speak; use End Conversation and type instead.');
+    if (Voice.engine() === 'agent') { startAgentCall(); return; }
+
+    if (!SR) showBanner('This browser can\u2019t listen \u2014 speech recognition needs Chrome, Edge, or Safari. FELIX will still speak; use End Conversation and type instead.');
 
     setTimeout(() => {
       const g = SCRIPT.callGreeting;
       liveTurn('agent', g.text);
       agentSays(g.speech || g.text);
     }, 700);
+  }
+
+  /* ── Live call, ElevenLabs agent ────────────────────────────────────
+   * The agent owns the whole conversation: its own LLM, speech recognition,
+   * voice and turn taking. We only mirror its state into this UI, so the
+   * scripted matcher is bypassed entirely.
+   * ------------------------------------------------------------------ */
+
+  let agentTurn = null;   // agent messages stream in; keep appending to one bubble
+
+  function startAgentCall() {
+    state.agentMode = true;
+    setCallState('Connecting\u2026', 'Starting the ElevenLabs agent');
+
+    Voice.agent.start({
+      onStatus: status => {
+        if (state.mode !== 'call') return;
+        if (status === 'connecting') setCallState('Connecting\u2026', 'Starting the ElevenLabs agent');
+        if (status === 'connected')  setCallState('Connected', 'Speak naturally');
+        if (status === 'disconnected' && state.agentMode) endCall();
+      },
+      onMode: mode => {
+        if (state.mode !== 'call') return;
+        if (mode === 'speaking') {
+          el.call.classList.remove('is-listening');
+          el.call.classList.add('is-speaking');
+          setCallState('Agent is speaking\u2026', 'Speak naturally');
+        } else {
+          el.call.classList.remove('is-speaking');
+          el.call.classList.add('is-listening');
+          setCallState('Listening\u2026', 'Speak naturally');
+          agentTurn = null;   // the agent's turn ended; next one starts a new bubble
+        }
+      },
+      onMessage: (role, text) => {
+        if (state.mode !== 'call' || !text) return;
+        if (role === 'user') { liveTurn('you', text); agentTurn = null; return; }
+        if (agentTurn) {
+          const node = agentTurn.querySelector('.live-text');
+          node.textContent = (node.textContent + ' ' + text).trim();
+          el.liveBox.scrollTop = el.liveBox.scrollHeight;
+        } else {
+          agentTurn = liveTurn('agent', text);
+        }
+      },
+      onLevel: v => el.call.style.setProperty('--level', String(v || 0)),
+      onError: msg => showBanner('ElevenLabs agent error: ' + msg)
+    }).catch(err => {
+      showBanner('Could not start the ElevenLabs agent (' + err.message + '). Falling back to the scripted voice.');
+      state.agentMode = false;
+      setTimeout(() => {
+        const g = SCRIPT.callGreeting;
+        liveTurn('agent', g.text);
+        agentSays(g.speech || g.text);
+      }, 400);
+    });
   }
 
   function agentSays(speech) {
@@ -1850,6 +2310,7 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
   }
 
   function endCall() {
+    if (state.agentMode) { Voice.agent.stop(); state.agentMode = false; agentTurn = null; }
     state.mode = el.thread.children.length ? 'chat' : 'welcome';
     el.welcome.hidden = state.mode === 'chat';
     cancelSpeech();
@@ -1864,6 +2325,7 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
 
   /* Tap the orb to interrupt FELIX mid-sentence. */
   el.orb.addEventListener('click', () => {
+    if (state.agentMode) return;   // the ElevenLabs agent handles barge-in natively
     if (state.speaking) { cancelSpeech(); listenInCall(); }
     else if (!state.listening) listenInCall();
   });
@@ -1871,6 +2333,12 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
   el.callMic.addEventListener('click', () => {
     state.muted = !state.muted;
     el.callMic.classList.toggle('is-muted', state.muted);
+
+    if (state.agentMode) {
+      Voice.agent.mute(state.muted);
+      setCallState(state.muted ? 'Muted' : 'Listening\u2026', state.muted ? 'Tap the mic to unmute' : 'Speak naturally');
+      return;
+    }
     if (state.muted) { stopRecognition(); setCallState('Muted', 'Tap the mic to unmute'); }
     else if (!state.speaking) listenInCall();
   });
@@ -1918,6 +2386,93 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
     banner.textContent = msg;
     document.querySelector('.composer-wrap').prepend(banner);
   }
+
+  /* ── Settings sheet ─────────────────────────────────────────────── */
+
+  const sheet = $('settings');
+  const sheetMsg = $('sheet-msg');
+  const fldKey = $('el-key'), fldVoice = $('el-voice'), fldModel = $('el-model'), fldAgent = $('el-agent');
+
+  Voice.VOICES.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v.id; o.textContent = v.name;
+    fldVoice.appendChild(o);
+  });
+
+  function syncFields() {
+    const picked = document.querySelector('input[name="engine"]:checked');
+    const val = picked ? picked.value : 'browser';
+    document.querySelectorAll('.opt-fields').forEach(f =>
+      f.classList.toggle('is-open', f.dataset.for === val));
+  }
+
+  function loadSettings() {
+    const c = Voice.config();
+    const radio = document.querySelector(`input[name="engine"][value="${c.engine}"]`);
+    if (radio) radio.checked = true;
+    fldKey.value = c.apiKey;
+    fldVoice.value = c.voiceId;
+    fldModel.value = c.modelId;
+    fldAgent.value = c.agentId;
+    syncFields();
+  }
+
+  function sheetSay(text, ok) {
+    sheetMsg.textContent = text;
+    sheetMsg.className = 'sheet-msg ' + (ok ? 'ok' : 'bad');
+    sheetMsg.hidden = false;
+  }
+
+  function markEngine() {
+    $('btn-settings').classList.toggle('is-live', Voice.engine() !== 'browser');
+  }
+
+  function saveSettings() {
+    const picked = document.querySelector('input[name="engine"]:checked');
+    Voice.setConfig({
+      engine:  picked ? picked.value : 'browser',
+      apiKey:  fldKey.value.trim(),
+      voiceId: fldVoice.value,
+      modelId: fldModel.value,
+      agentId: fldAgent.value.trim()
+    });
+
+    const chosen = picked ? picked.value : 'browser';
+    const active = Voice.engine();
+    markEngine();
+
+    if (chosen !== 'browser' && active === 'browser') {
+      sheetSay(chosen === 'agent'
+        ? 'Saved, but no agent ID — still using the browser voice.'
+        : 'Saved, but no API key — still using the browser voice.', false);
+      return;
+    }
+    sheetSay(active === 'agent'
+      ? 'Saved. Start a voice call and the ElevenLabs agent takes over.'
+      : active === 'elevenlabs'
+        ? 'Saved. FELIX now speaks with an ElevenLabs voice.'
+        : 'Saved. Using the browser voice.', true);
+  }
+
+  $('btn-settings').addEventListener('click', () => { loadSettings(); sheetMsg.hidden = true; sheet.hidden = false; });
+  sheet.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => { sheet.hidden = true; Voice.cancel(); }));
+  document.querySelectorAll('input[name="engine"]').forEach(r => r.addEventListener('change', syncFields));
+  $('btn-save').addEventListener('click', saveSettings);
+
+  $('btn-test').addEventListener('click', () => {
+    saveSettings();
+    if (Voice.engine() === 'agent') {
+      sheetSay('Agent mode has no test line — close this and start a voice call.', true);
+      return;
+    }
+    sheetSay('Playing…', true);
+    Voice.speak(
+      'Doctor Priya Raman has three new Pacrivex starts in the last thirty days, and no titration support has been delivered.',
+      { onDone: () => sheetSay('That is how FELIX will sound.', true),
+        onError: err => sheetSay('ElevenLabs rejected that: ' + err.message, false) });
+  });
+
+  markEngine();
 
   if (!SR) showBanner('This browser can’t listen — speech recognition needs Chrome, Edge, or Safari. Typing and the suggestions run the same conversation.');
 })();

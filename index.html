@@ -40,6 +40,9 @@
       <button class="new-btn" id="btn-new" title="New conversation" aria-label="New conversation">
         <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
       </button>
+      <button class="gear-btn" id="btn-settings" title="Voice settings" aria-label="Voice settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5v.2a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>
+      </button>
 
       <div class="ask-scroll" id="ask-scroll">
 
@@ -184,12 +187,88 @@
     <button><svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18.5" cy="12" r="1.5"/></svg><span>More</span></button>
   </nav>
 
+  <!-- ── Voice settings ─────────────────────────────────────────── -->
+  <div class="sheet-wrap" id="settings" hidden>
+    <div class="sheet-backdrop" data-close></div>
+    <div class="sheet" role="dialog" aria-label="Voice settings">
+      <header class="sheet-head">
+        <h2>Voice</h2>
+        <button class="sheet-x" data-close aria-label="Close">
+          <svg viewBox="0 0 24 24"><path d="m5.5 5.5 13 13M18.5 5.5l-13 13"/></svg>
+        </button>
+      </header>
+
+      <div class="sheet-body">
+
+        <label class="opt">
+          <input type="radio" name="engine" value="browser" />
+          <span class="opt-body">
+            <strong>Browser voice</strong>
+            <em>Works everywhere with no setup. Robotic, and turn taking is basic.</em>
+          </span>
+        </label>
+
+        <label class="opt">
+          <input type="radio" name="engine" value="elevenlabs" />
+          <span class="opt-body">
+            <strong>ElevenLabs voice</strong>
+            <em>FELIX keeps the scripted answers, but speaks with a natural ElevenLabs voice.</em>
+          </span>
+        </label>
+
+        <div class="opt-fields" data-for="elevenlabs">
+          <label class="fld">
+            <span>API key</span>
+            <input type="password" id="el-key" placeholder="sk_…" autocomplete="off" spellcheck="false" />
+          </label>
+          <label class="fld">
+            <span>Voice</span>
+            <select id="el-voice"></select>
+          </label>
+          <label class="fld">
+            <span>Model</span>
+            <select id="el-model">
+              <option value="eleven_flash_v2_5">Flash v2.5 — lowest latency (~75 ms)</option>
+              <option value="eleven_turbo_v2_5">Turbo v2.5 — balanced (~250 ms)</option>
+              <option value="eleven_multilingual_v2">Multilingual v2 — highest quality</option>
+            </select>
+          </label>
+          <p class="warn-note">The key is stored in this browser and sent straight to ElevenLabs from the page. Fine for a local demo — don’t put a production key into a publicly shared link.</p>
+        </div>
+
+        <label class="opt">
+          <input type="radio" name="engine" value="agent" />
+          <span class="opt-body">
+            <strong>ElevenLabs agent <span class="badge">most conversational</span></strong>
+            <em>A real voice agent — its own LLM, speech recognition and natural interruption. Answers freely instead of following the script.</em>
+          </span>
+        </label>
+
+        <div class="opt-fields" data-for="agent">
+          <label class="fld">
+            <span>Agent ID</span>
+            <input type="text" id="el-agent" placeholder="agent_…" autocomplete="off" spellcheck="false" />
+          </label>
+          <p class="warn-note">Create an agent at elevenlabs.io, set it <strong>public</strong> (authentication disabled), and paste its ID. No API key is needed or stored. Use the prompt in <code>AGENT-PROMPT.md</code> so it answers as FELIX.</p>
+        </div>
+
+        <div class="sheet-msg" id="sheet-msg" hidden></div>
+      </div>
+
+      <footer class="sheet-foot">
+        <button class="btn-ghost" id="btn-test">Test voice</button>
+        <button class="btn-primary" id="btn-save">Save</button>
+      </footer>
+    </div>
+  </div>
+
   <button class="dismiss" title="Close" aria-label="Close">
     <svg viewBox="0 0 24 24"><path d="m5.5 5.5 13 13M18.5 5.5l-13 13"/></svg>
   </button>
 </div>
 
 <script src="assets/script-data.js"></script>
+<script src="assets/voice.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>

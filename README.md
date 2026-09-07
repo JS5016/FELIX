@@ -4,11 +4,19 @@ A working voice chatbot modelled on the **Ask FELIX** tab of `zsfelix.com/chat`:
 field assistant for pharma reps that you talk to between calls, rebuilt from
 screenshots of the real product (Veeva CRM shell, orange theme, live voice call).
 
-It runs entirely in the browser. No build step, no server, no API keys.
+It runs entirely in the browser. No build step, no server, and no API key required.
 
-- **Listening** — Web Speech API (`SpeechRecognition`)
-- **Voice** — `speechSynthesis`
-- **Conversation** — a deterministic script in `assets/script-data.js`
+Three voice engines, switchable at runtime from the **gear** button:
+
+| Engine | Conversation | Voice | Setup |
+| --- | --- | --- | --- |
+| **Browser** (default) | scripted | `speechSynthesis` | none |
+| **ElevenLabs voice** | scripted | ElevenLabs TTS | API key |
+| **ElevenLabs agent** | real LLM, free-form | ElevenLabs | public agent ID |
+
+The default keeps a plain deployment working with zero configuration. See
+[AGENT-PROMPT.md](AGENT-PROMPT.md) for the agent setup and a ready-to-paste
+FELIX system prompt.
 
 ## Run it
 
@@ -40,6 +48,11 @@ with rich cards.
 you talk, a mute button, and **End Conversation**. Turn taking is hands-free: FELIX
 finishes speaking, then the mic reopens automatically. Tap the orb to interrupt him
 mid-sentence.
+
+In **ElevenLabs agent** mode the same screen is driven by a real agent instead: the
+SDK owns recognition, the LLM, the voice and barge-in, and the app just mirrors its
+state into this UI. Tap-to-interrupt is disabled there because you can simply talk
+over it.
 
 If the mic is blocked or unavailable, a banner says so and everything still works by typing.
 
@@ -93,13 +106,33 @@ Card types available to `blocks`: `hcp`, `rx` (prescribing bars), `kv`, `panel`,
 `checklist`, `slots`, `note`, `callout`. All are documented at the top of
 `script-data.js`.
 
+## Voice engines
+
+`assets/voice.js` is the only file that talks to a speech backend, so the rest of the
+app is engine-agnostic — it calls `Voice.speak(text, { onStart, onDone })` and lets the
+layer decide.
+
+**ElevenLabs voice** posts to `POST /v1/text-to-speech/{voice_id}` with `eleven_flash_v2_5`
+(~75 ms) by default, caches repeated lines as object URLs, and falls back to the browser
+voice if the request fails so a turn is never silent. The key is held in `localStorage`
+and sent from the page — fine locally, not for a public link.
+
+**ElevenLabs agent** loads `@elevenlabs/client` (IIFE build, on demand) and calls
+`Conversation.startSession({ agentId, connectionType: 'webrtc' })`. `onModeChange` drives
+the orb, `onMessage` fills the transcript, `getInputVolume()` scales the orb, and
+`setMicMuted()` backs the mute button. Only a **public** agent ID is needed, so no
+credential is ever in the page. If the SDK cannot load, the call falls back to the
+scripted voice with a visible banner.
+
 ## Files
 
 ```
-index.html              Veeva shell, tabs, welcome / chat / call views
+index.html              Veeva shell, tabs, welcome / chat / call views, settings sheet
 assets/styles.css       light orange theme and components
-assets/app.js           speech in/out, call state machine, matching, rendering
-assets/script-data.js   the conversation — edit this to change the demo
+assets/voice.js         voice engines: browser, ElevenLabs TTS, ElevenLabs agent
+assets/app.js           call state machine, script matching, rendering
+assets/script-data.js   the scripted conversation — edit this to change the demo
+AGENT-PROMPT.md         ElevenLabs agent setup + the FELIX system prompt
 build-standalone.js     inlines everything into felix-standalone.html
 felix-standalone.html   single-file build, opens with no server
 ```

@@ -44,7 +44,8 @@
     speaking: false,
     listening: false,
     muted: false,
-    dictating: false
+    dictating: false,
+    agentMode: false
   };
 
   /* ── Clock ──────────────────────────────────────────────────────── */
@@ -332,61 +333,36 @@
     el.input.value = '';
   });
 
-  /* ── Text to speech ─────────────────────────────────────────────── */
+  /* ── Speech (delegated to assets/voice.js) ─────────────────────── */
 
-  const tts = window.speechSynthesis;
-  let voice = null;
-
-  function pickVoice() {
-    if (!tts) return;
-    const vs = tts.getVoices();
-    if (!vs.length) return;
-    const prefer = ['Samantha', 'Google US English',
-      'Microsoft Aria Online (Natural) - English (United States)',
-      'Microsoft Jenny Online (Natural) - English (United States)', 'Karen'];
-    voice = prefer.map(n => vs.find(v => v.name === n)).find(Boolean)
-         || vs.find(v => /^en[-_]US/i.test(v.lang))
-         || vs.find(v => /^en/i.test(v.lang)) || vs[0];
-  }
-  if (tts) { pickVoice(); tts.addEventListener('voiceschanged', pickVoice); }
+  const Voice = window.FelixVoice;
 
   function cancelSpeech() {
-    if (tts && (tts.speaking || tts.pending)) tts.cancel();
+    Voice.cancel();
     state.speaking = false;
     el.call.classList.remove('is-speaking');
   }
 
-  /* onDone fires when speech finishes (or immediately if TTS is unavailable). */
+  /* onDone fires when the line finishes, which is what drives turn taking. */
   function speak(text, onDone) {
-    if (!tts || !text) { if (onDone) onDone(); return; }
+    if (!text) { if (onDone) onDone(); return; }
     cancelSpeech();
-
-    const u = new SpeechSynthesisUtterance(text);
-    if (voice) u.voice = voice;
-    u.rate = 1.02; u.pitch = 1;
-    u.lang = (voice && voice.lang) || 'en-US';
-
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      state.speaking = false;
-      el.call.classList.remove('is-speaking');
-      if (onDone) onDone();
-    };
-
-    u.onstart = () => {
-      state.speaking = true;
-      if (state.mode === 'call') {
-        el.call.classList.add('is-speaking');
-        el.call.classList.remove('is-listening');
-        setCallState('Agent is speaking…', 'Speak naturally');
-      }
-    };
-    u.onend = finish;
-    u.onerror = finish;
-
-    setTimeout(() => tts.speak(u), 60);
+    Voice.speak(text, {
+      onStart: () => {
+        state.speaking = true;
+        if (state.mode === 'call') {
+          el.call.classList.remove('is-listening');
+          el.call.classList.add('is-speaking');
+          setCallState('Agent is speaking…', 'Speak naturally');
+        }
+      },
+      onDone: () => {
+        state.speaking = false;
+        el.call.classList.remove('is-speaking');
+        if (onDone) onDone();
+      },
+      onError: err => showBanner('ElevenLabs voice failed (' + err.message + ') — falling back to the browser voice.')
+    });
   }
 
   /* ── Speech recognition ─────────────────────────────────────────── */
@@ -488,15 +464,73 @@
     el.callMic.classList.remove('is-muted');
     el.liveBox.innerHTML = '';
     el.call.hidden = false;
-    setCallState('Connecting…', 'Speak naturally');
+    setCallState('Connecting\u2026', 'Speak naturally');
 
-    if (!SR) showBanner('This browser can’t listen — speech recognition needs Chrome, Edge, or Safari. FELIX will still speak; use End Conversation and type instead.');
+    if (Voice.engine() === 'agent') { startAgentCall(); return; }
+
+    if (!SR) showBanner('This browser can\u2019t listen \u2014 speech recognition needs Chrome, Edge, or Safari. FELIX will still speak; use End Conversation and type instead.');
 
     setTimeout(() => {
       const g = SCRIPT.callGreeting;
       liveTurn('agent', g.text);
       agentSays(g.speech || g.text);
     }, 700);
+  }
+
+  /* ── Live call, ElevenLabs agent ────────────────────────────────────
+   * The agent owns the whole conversation: its own LLM, speech recognition,
+   * voice and turn taking. We only mirror its state into this UI, so the
+   * scripted matcher is bypassed entirely.
+   * ------------------------------------------------------------------ */
+
+  let agentTurn = null;   // agent messages stream in; keep appending to one bubble
+
+  function startAgentCall() {
+    state.agentMode = true;
+    setCallState('Connecting\u2026', 'Starting the ElevenLabs agent');
+
+    Voice.agent.start({
+      onStatus: status => {
+        if (state.mode !== 'call') return;
+        if (status === 'connecting') setCallState('Connecting\u2026', 'Starting the ElevenLabs agent');
+        if (status === 'connected')  setCallState('Connected', 'Speak naturally');
+        if (status === 'disconnected' && state.agentMode) endCall();
+      },
+      onMode: mode => {
+        if (state.mode !== 'call') return;
+        if (mode === 'speaking') {
+          el.call.classList.remove('is-listening');
+          el.call.classList.add('is-speaking');
+          setCallState('Agent is speaking\u2026', 'Speak naturally');
+        } else {
+          el.call.classList.remove('is-speaking');
+          el.call.classList.add('is-listening');
+          setCallState('Listening\u2026', 'Speak naturally');
+          agentTurn = null;   // the agent's turn ended; next one starts a new bubble
+        }
+      },
+      onMessage: (role, text) => {
+        if (state.mode !== 'call' || !text) return;
+        if (role === 'user') { liveTurn('you', text); agentTurn = null; return; }
+        if (agentTurn) {
+          const node = agentTurn.querySelector('.live-text');
+          node.textContent = (node.textContent + ' ' + text).trim();
+          el.liveBox.scrollTop = el.liveBox.scrollHeight;
+        } else {
+          agentTurn = liveTurn('agent', text);
+        }
+      },
+      onLevel: v => el.call.style.setProperty('--level', String(v || 0)),
+      onError: msg => showBanner('ElevenLabs agent error: ' + msg)
+    }).catch(err => {
+      showBanner('Could not start the ElevenLabs agent (' + err.message + '). Falling back to the scripted voice.');
+      state.agentMode = false;
+      setTimeout(() => {
+        const g = SCRIPT.callGreeting;
+        liveTurn('agent', g.text);
+        agentSays(g.speech || g.text);
+      }, 400);
+    });
   }
 
   function agentSays(speech) {
@@ -549,6 +583,7 @@
   }
 
   function endCall() {
+    if (state.agentMode) { Voice.agent.stop(); state.agentMode = false; agentTurn = null; }
     state.mode = el.thread.children.length ? 'chat' : 'welcome';
     el.welcome.hidden = state.mode === 'chat';
     cancelSpeech();
@@ -563,6 +598,7 @@
 
   /* Tap the orb to interrupt FELIX mid-sentence. */
   el.orb.addEventListener('click', () => {
+    if (state.agentMode) return;   // the ElevenLabs agent handles barge-in natively
     if (state.speaking) { cancelSpeech(); listenInCall(); }
     else if (!state.listening) listenInCall();
   });
@@ -570,6 +606,12 @@
   el.callMic.addEventListener('click', () => {
     state.muted = !state.muted;
     el.callMic.classList.toggle('is-muted', state.muted);
+
+    if (state.agentMode) {
+      Voice.agent.mute(state.muted);
+      setCallState(state.muted ? 'Muted' : 'Listening\u2026', state.muted ? 'Tap the mic to unmute' : 'Speak naturally');
+      return;
+    }
     if (state.muted) { stopRecognition(); setCallState('Muted', 'Tap the mic to unmute'); }
     else if (!state.speaking) listenInCall();
   });
@@ -617,6 +659,93 @@
     banner.textContent = msg;
     document.querySelector('.composer-wrap').prepend(banner);
   }
+
+  /* ── Settings sheet ─────────────────────────────────────────────── */
+
+  const sheet = $('settings');
+  const sheetMsg = $('sheet-msg');
+  const fldKey = $('el-key'), fldVoice = $('el-voice'), fldModel = $('el-model'), fldAgent = $('el-agent');
+
+  Voice.VOICES.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v.id; o.textContent = v.name;
+    fldVoice.appendChild(o);
+  });
+
+  function syncFields() {
+    const picked = document.querySelector('input[name="engine"]:checked');
+    const val = picked ? picked.value : 'browser';
+    document.querySelectorAll('.opt-fields').forEach(f =>
+      f.classList.toggle('is-open', f.dataset.for === val));
+  }
+
+  function loadSettings() {
+    const c = Voice.config();
+    const radio = document.querySelector(`input[name="engine"][value="${c.engine}"]`);
+    if (radio) radio.checked = true;
+    fldKey.value = c.apiKey;
+    fldVoice.value = c.voiceId;
+    fldModel.value = c.modelId;
+    fldAgent.value = c.agentId;
+    syncFields();
+  }
+
+  function sheetSay(text, ok) {
+    sheetMsg.textContent = text;
+    sheetMsg.className = 'sheet-msg ' + (ok ? 'ok' : 'bad');
+    sheetMsg.hidden = false;
+  }
+
+  function markEngine() {
+    $('btn-settings').classList.toggle('is-live', Voice.engine() !== 'browser');
+  }
+
+  function saveSettings() {
+    const picked = document.querySelector('input[name="engine"]:checked');
+    Voice.setConfig({
+      engine:  picked ? picked.value : 'browser',
+      apiKey:  fldKey.value.trim(),
+      voiceId: fldVoice.value,
+      modelId: fldModel.value,
+      agentId: fldAgent.value.trim()
+    });
+
+    const chosen = picked ? picked.value : 'browser';
+    const active = Voice.engine();
+    markEngine();
+
+    if (chosen !== 'browser' && active === 'browser') {
+      sheetSay(chosen === 'agent'
+        ? 'Saved, but no agent ID — still using the browser voice.'
+        : 'Saved, but no API key — still using the browser voice.', false);
+      return;
+    }
+    sheetSay(active === 'agent'
+      ? 'Saved. Start a voice call and the ElevenLabs agent takes over.'
+      : active === 'elevenlabs'
+        ? 'Saved. FELIX now speaks with an ElevenLabs voice.'
+        : 'Saved. Using the browser voice.', true);
+  }
+
+  $('btn-settings').addEventListener('click', () => { loadSettings(); sheetMsg.hidden = true; sheet.hidden = false; });
+  sheet.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => { sheet.hidden = true; Voice.cancel(); }));
+  document.querySelectorAll('input[name="engine"]').forEach(r => r.addEventListener('change', syncFields));
+  $('btn-save').addEventListener('click', saveSettings);
+
+  $('btn-test').addEventListener('click', () => {
+    saveSettings();
+    if (Voice.engine() === 'agent') {
+      sheetSay('Agent mode has no test line — close this and start a voice call.', true);
+      return;
+    }
+    sheetSay('Playing…', true);
+    Voice.speak(
+      'Doctor Priya Raman has three new Pacrivex starts in the last thirty days, and no titration support has been delivered.',
+      { onDone: () => sheetSay('That is how FELIX will sound.', true),
+        onError: err => sheetSay('ElevenLabs rejected that: ' + err.message, false) });
+  });
+
+  markEngine();
 
   if (!SR) showBanner('This browser can’t listen — speech recognition needs Chrome, Edge, or Safari. Typing and the suggestions run the same conversation.');
 })();
