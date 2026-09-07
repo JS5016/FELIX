@@ -648,6 +648,12 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
   .opt-fields { padding-left: 20px; }
 }
 
+.or-sep {
+  margin: -4px 0 12px; text-align: center;
+  font-size: 12px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .08em;
+}
+.good-note { background: #EDFAF2; border-left-color: var(--green); color: #16653C; }
+
 </style>
 </head>
 <body>
@@ -893,6 +899,48 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
             <input type="text" id="el-agent" placeholder="agent_…" autocomplete="off" spellcheck="false" />
           </label>
           <p class="warn-note">Create an agent at elevenlabs.io, set it <strong>public</strong> (authentication disabled), and paste its ID. No API key is needed or stored. Use the prompt in <code>AGENT-PROMPT.md</code> so it answers as FELIX.</p>
+        </div>
+
+        <label class="opt">
+          <input type="radio" name="engine" value="openai" />
+          <span class="opt-body">
+            <strong>OpenAI <span class="badge">free-form</span></strong>
+            <em>GPT answers instead of the script, speaks with an OpenAI voice, and a voice call runs on the Realtime API — speech to speech, with barge-in.</em>
+          </span>
+        </label>
+
+        <div class="opt-fields" data-for="openai">
+          <label class="fld">
+            <span>Proxy URL — recommended, keeps the key off the browser</span>
+            <input type="text" id="oa-proxy" placeholder="/api  (run: OPENAI_API_KEY=sk-… node server.js)" autocomplete="off" spellcheck="false" />
+          </label>
+          <p class="or-sep">or</p>
+          <label class="fld">
+            <span>API key — used only if no proxy URL is set</span>
+            <input type="password" id="oa-key" placeholder="sk-…" autocomplete="off" spellcheck="false" />
+          </label>
+          <label class="fld">
+            <span>Voice</span>
+            <select id="oa-voice"></select>
+          </label>
+          <label class="fld">
+            <span>Chat model</span>
+            <select id="oa-chat">
+              <option value="gpt-5.2">gpt-5.2 — best quality</option>
+              <option value="gpt-5.1">gpt-5.1</option>
+              <option value="gpt-5-mini">gpt-5-mini — cheaper, quicker</option>
+              <option value="gpt-4.1-mini">gpt-4.1-mini — cheapest</option>
+            </select>
+          </label>
+          <label class="fld">
+            <span>Realtime model — used for voice calls</span>
+            <select id="oa-realtime">
+              <option value="gpt-realtime-2.1">gpt-realtime-2.1</option>
+              <option value="gpt-realtime-2.1-mini">gpt-realtime-2.1-mini — cheaper</option>
+              <option value="gpt-realtime-2">gpt-realtime-2</option>
+            </select>
+          </label>
+          <p class="warn-note" id="oa-warn"></p>
         </div>
 
         <div class="sheet-msg" id="sheet-msg" hidden></div>
@@ -1470,6 +1518,100 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
 </script>
 <script>
 /* ============================================================================
+ * FELIX — persona
+ * ----------------------------------------------------------------------------
+ * Single source of truth for who FELIX is and what he knows. Used as:
+ *   - the system prompt for OpenAI chat completions (assets/brain.js)
+ *   - the `instructions` on an OpenAI Realtime session (assets/voice.js)
+ *   - the prompt you paste into an ElevenLabs agent (see AGENT-PROMPT.md)
+ *
+ * Editing this changes every free-form engine at once. The scripted engine is
+ * unaffected — that lives in assets/script-data.js.
+ * ==========================================================================*/
+
+window.FELIX_PERSONA = {
+  firstMessage: "Hi John, FELIX here. You're at University Rehabilitation Center in Fort Worth. What do you need?",
+  systemPrompt: "You are FELIX, a voice assistant for pharmaceutical field representatives, built into\nVeeva CRM. You are speaking with John, a rep covering the Fort Worth territory. He is\nbetween calls, often walking, and usually has a few minutes at most.\n\n## How to speak\n\n- You are on a phone call. Be brief. Two or three sentences, then stop and let him talk.\n- Never read out lists of more than three items. Give the top two and offer the rest.\n- Lead with the answer, then the reason. Never preamble (\"Sure, I can help with that\").\n- Say numbers naturally: \"sixteen total prescriptions\", not \"16 TRx\".\n- Never use markdown, bullets, or headings \u2014 everything you say is spoken aloud.\n- End on a question or a concrete offer when there is an obvious next step.\n- If he interrupts, stop immediately and follow him.\n- If you do not know something, say so and offer what you do have. Never invent a\n  number, a date, or a clinical claim.\n\n## Compliance\n\n- On-label discussion only. If asked about unapproved uses, decline and say you can\n  only cover approved indications.\n- Never give medical advice or recommend a therapy for a specific patient.\n- If he reports an adverse event, tell him it must be logged within 24 hours and offer\n  to start the report.\n- Only reference materials that are MLR approved.\n\n## Territory data you know\n\nEverything below is the entirety of your knowledge. Do not invent additions.\n\n### Dr. Yuki Watanabe \u2014 the rep just left her\n- Hematology and internal medicine, Fort Worth. High priority target.\n- Affiliated with University Rehabilitation Center, Suite 310.\n- Prescribing: Pacrivex 16 total prescriptions, 9 new. Competitors: Momelyx 12, Ruxoril 9.\n- Most recent touch: in-person call on September 1 about Pacrivex, focused on early\n  tolerability concerns, and walking the staff through the starter and titration pack.\n- Interaction history: Sept 1 in person (tolerability, titration pack; asked for\n  real-world discontinuation rates). Aug 11 phone (formulary coverage). Jul 22 in person\n  (first raised tolerability). Jun 30 email (dosing guide, opened twice, no reply).\n- Open thread: she has raised tolerability three times. The real-world discontinuation\n  data she asked for on Sept 1 has not been sent. It was MLR approved on August 26.\n- Her call note from today is not yet logged.\n\n### Dr. Priya Raman \u2014 best nearby opportunity\n- Hematology / oncology, high priority. Suite 320, same floor as Dr. Watanabe, one\n  minute away.\n- Pacrivex 11 total prescriptions, 6 new. Three of those starts are in the last 30 days.\n- The gap: no titration pack has been delivered to her staff. That is the same gap that\n  caused early drop-offs on Dr. Watanabe's panel, so those three starts are fragile.\n- Last touch 38 days ago, in person. Active suggestion expires in 5 days.\n- Availability: her office keeps an afternoon rep window. Her coordinator Dana has a\n  20-minute slot in about 20 minutes, a tighter 15-minute slot about 50 minutes out, and\n  the window closes in roughly 1 hour 40. Tomorrow she has 30 minutes at 9:45 am.\n- Suggested opener: \"Dr. Raman, you've started three patients on Pacrivex in the last\n  month and your staff never got the titration pack. I've got ten minutes to walk them\n  through it. Is now bad?\"\n\n### Dr. Marcus Okonkwo \u2014 lower priority\n- Internal medicine, medium priority. Suite 145, ground floor, three minutes away.\n- Momelyx 14 total prescriptions against Pacrivex 4 (2 new). A Momelyx loyalist.\n- He raised tolerability as his objection in July. Last touch 3 weeks ago by email.\n- Medium because it is a longer play: no urgency this week, and Dr. Raman has three\n  live starts on the line. Suggestion expires in 11 days.\n\n### Others in the territory\n- Dr. Nina Castellanos \u2014 the real risk. Pacrivex down 31% in 30 days, Momelyx up, and\n  46 days since any contact. Largest lapsed writer at 22 total prescriptions.\n- Dr. Alan Whitfield \u2014 high priority, 41 days since contact, Arlington, on the Thursday\n  loop. Confirmed as the rep's next appointment today, about a 35 minute drive. Open\n  suggestion: formulary coverage update, expires in 14 days.\n- Dr. Sara Lindqvist \u2014 medium, 29 days since contact, Denton.\n\n### Approved materials, all MLR approved August 26\n- Pacrivex starter and titration pack \u2014 the leave-behind.\n- Pacrivex early tolerability summary \u2014 present on screen.\n- Pacrivex real-world discontinuation summary \u2014 what Dr. Watanabe asked for.\n- Current prescribing information \u2014 required alongside any of the above.\n- The pre-August tolerability deck is retired and has been removed from his tablet.\n\n### Today\n- The rep just finished early with Dr. Watanabe and has roughly 45 minutes free.\n- Next confirmed call: Dr. Whitfield in Arlington, about 35 minutes away.\n- Then territory wrap-up.\n- Six active suggestions this week; four matter: Raman (high), Watanabe (high),\n  Okonkwo (medium), Whitfield (medium). The other two are low-priority speaker\n  program invitations expiring in 21 days.\n- Five customers have gone 4+ weeks without contact: Raman 38 days, Whitfield 41,\n  Castellanos 46, Okonkwo 31, Lindqvist 29. Two of them \u2014 Raman and Okonkwo \u2014 are in\n  this building right now.\n\n## What you can do\n\nYou can look things up, brief him before he walks in, check availability, book a slot,\ndraft an email or a call note, and coach him on an opener. When he asks you to book,\nsend, or file something, confirm what you did in one sentence.\n\nYou cannot actually write to the CRM in this demo, so when you \"file\" or \"send\"\nsomething, describe it as done and move on. Never say you are a demo, a prototype, or\nan AI language model. You are FELIX.\n\n## Opening move\n\nIf he says he wrapped up early with Dr. Yuki and asks who else is in the building with\nan active suggestion, answer: about 45 minutes free, two prescribers here have active\nsuggestions \u2014 Dr. Priya Raman in Suite 320, high priority, same floor, and Dr. Marcus\nOkonkwo in Suite 145, medium. Raman is the better use of the window. Then offer the\ndetail."
+};
+
+</script>
+<script>
+/* ============================================================================
+ * FELIX — OpenAI brain
+ * ----------------------------------------------------------------------------
+ * Replaces the keyword matcher with a real model for typed and dictated turns,
+ * so FELIX answers anything instead of only the scripted branches.
+ *
+ * Credentials come from one of two places, decided by the settings sheet:
+ *   proxy   POST {proxyUrl}/chat        — key stays on the server (preferred)
+ *   direct  POST api.openai.com/v1/...  — key lives in this browser
+ *
+ * Endpoint: POST /v1/chat/completions   (verified against openai-node 7.10.0)
+ * ==========================================================================*/
+(function () {
+  'use strict';
+
+  const API = 'https://api.openai.com/v1/chat/completions';
+  const MAX_TURNS = 16;   // keep the request small; this is a between-calls assistant
+
+  let history = [];
+
+  function reset() { history = []; }
+
+  function endpoint(cfg) {
+    return cfg.proxyUrl ? cfg.proxyUrl.replace(/\/$/, '') + '/chat' : API;
+  }
+
+  function headers(cfg) {
+    const h = { 'Content-Type': 'application/json' };
+    if (!cfg.proxyUrl) h['Authorization'] = 'Bearer ' + cfg.openaiKey;
+    return h;
+  }
+
+  /* Resolves to the reply text, or rejects with a readable message. */
+  async function ask(text, cfg) {
+    const persona = window.FELIX_PERSONA;
+
+    history.push({ role: 'user', content: text });
+    if (history.length > MAX_TURNS) history = history.slice(-MAX_TURNS);
+
+    const res = await fetch(endpoint(cfg), {
+      method: 'POST',
+      headers: headers(cfg),
+      body: JSON.stringify({
+        model: cfg.chatModel,
+        messages: [{ role: 'system', content: persona.systemPrompt }].concat(history),
+        max_completion_tokens: 400
+      })
+    });
+
+    if (!res.ok) {
+      let msg = res.status + ' ' + res.statusText;
+      try {
+        const j = await res.json();
+        if (j && j.error && j.error.message) msg = j.error.message;
+      } catch (_) {}
+      history.pop();                       // don't poison the next attempt
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    const reply = data.choices && data.choices[0] && data.choices[0].message
+      ? (data.choices[0].message.content || '').trim()
+      : '';
+
+    if (!reply) { history.pop(); throw new Error('The model returned an empty reply'); }
+
+    history.push({ role: 'assistant', content: reply });
+    return reply;
+  }
+
+  window.FelixBrain = { ask, reset };
+})();
+
+</script>
+<script>
+/* ============================================================================
  * FELIX — voice layer
  * ----------------------------------------------------------------------------
  * Three engines, chosen at runtime from the settings panel and remembered in
@@ -1505,12 +1647,23 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
     { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel — authoritative' }
   ];
 
+  /* Verified against openai-node 7.10.0. */
+  const OA_VOICES = ['marin', 'cedar', 'alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse'];
+
   const DEFAULTS = {
     engine: 'browser',
     apiKey: '',
     voiceId: VOICES[0].id,
     modelId: 'eleven_flash_v2_5',   // ~75 ms; turbo_v2_5 trades latency for polish
-    agentId: ''
+    agentId: '',
+
+    /* OpenAI */
+    openaiKey: '',
+    proxyUrl: '',                       // set this and the key never enters the browser
+    chatModel: 'gpt-5.2',
+    ttsModel: 'gpt-4o-mini-tts',
+    oaVoice: 'marin',
+    realtimeModel: 'gpt-realtime-2.1'
   };
 
   /* ── Config ─────────────────────────────────────────────────────── */
@@ -1531,7 +1684,28 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
   function engine() {
     if (cfg.engine === 'agent' && cfg.agentId) return 'agent';
     if (cfg.engine === 'elevenlabs' && cfg.apiKey) return 'elevenlabs';
+    if (cfg.engine === 'openai' && (cfg.openaiKey || cfg.proxyUrl)) return 'openai';
     return 'browser';
+  }
+
+  /* True when a real model, not the keyword matcher, should answer. */
+  const freeForm = () => engine() === 'openai';
+
+  const oaBase = () => cfg.proxyUrl ? cfg.proxyUrl.replace(/\/$/, '') : 'https://api.openai.com/v1';
+
+  function oaHeaders(extra) {
+    const h = Object.assign({}, extra || {});
+    if (!cfg.proxyUrl) h['Authorization'] = 'Bearer ' + cfg.openaiKey;
+    return h;
+  }
+
+  async function oaError(res) {
+    let msg = res.status + ' ' + res.statusText;
+    try {
+      const j = await res.json();
+      if (j && j.error && j.error.message) msg = j.error.message;
+    } catch (_) {}
+    return new Error(msg);
   }
 
   /* ── Browser speech synthesis ───────────────────────────────────── */
@@ -1613,6 +1787,45 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
     });
   }
 
+  /* ── OpenAI text to speech ──────────────────────────────────────── */
+
+  const oaCache = new Map();
+
+  async function fetchOaSpeech(text) {
+    if (oaCache.has(text)) return oaCache.get(text);
+
+    const url = cfg.proxyUrl ? oaBase() + '/speech' : oaBase() + '/audio/speech';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: oaHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        model: cfg.ttsModel,
+        voice: cfg.oaVoice,
+        input: text,
+        response_format: 'mp3',
+        instructions: 'Speak like a calm, efficient colleague on a phone call. Brisk but never clipped.'
+      })
+    });
+    if (!res.ok) throw await oaError(res);
+
+    const objUrl = URL.createObjectURL(await res.blob());
+    if (oaCache.size < 40) oaCache.set(text, objUrl);
+    return objUrl;
+  }
+
+  function speakOa(text, onStart, onDone, onFail) {
+    fetchOaSpeech(text).then(url => {
+      audioEl = new Audio(url);
+      audioEl.onplay = () => { if (onStart) onStart(); };
+      audioEl.onended = () => { if (onDone) onDone(); };
+      audioEl.onerror = () => { if (onDone) onDone(); };
+      return audioEl.play();
+    }).catch(err => {
+      if (onFail) onFail(err);
+      speakBrowser(text, onStart, onDone);
+    });
+  }
+
   /* ── Public speak / cancel ──────────────────────────────────────── */
 
   function speak(text, opts) {
@@ -1620,8 +1833,10 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
     cancel();
     if (!text) { if (opts.onDone) opts.onDone(); return; }
 
-    if (engine() === 'elevenlabs') speakEleven(text, opts.onStart, opts.onDone, opts.onError);
-    else speakBrowser(text, opts.onStart, opts.onDone);
+    const e = engine();
+    if (e === 'elevenlabs')  speakEleven(text, opts.onStart, opts.onDone, opts.onError);
+    else if (e === 'openai') speakOa(text, opts.onStart, opts.onDone, opts.onError);
+    else                     speakBrowser(text, opts.onStart, opts.onDone);
   }
 
   function cancel() {
@@ -1704,10 +1919,151 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
 
   const agentActive = () => !!session;
 
+  /* ── OpenAI Realtime, speech to speech over WebRTC ──────────────────
+   * Verified against openai-node 7.10.0:
+   *   POST /v1/realtime/client_secrets  -> { value: "ek_..." }   (ephemeral)
+   *   POST /v1/realtime/calls           -> SDP answer            (multipart)
+   * The older /realtime/sessions beta endpoint no longer connects.
+   * ------------------------------------------------------------------ */
+
+  let pc = null, dc = null, rtAudio = null, rtStream = null, rtLevel = null;
+
+  async function mintToken() {
+    const session = {
+      type: 'realtime',
+      model: cfg.realtimeModel,
+      instructions: window.FELIX_PERSONA.systemPrompt,
+      audio: {
+        input: { transcription: { model: 'gpt-4o-mini-transcribe' } },
+        output: { voice: cfg.oaVoice }
+      }
+    };
+
+    // With a proxy the key stays server-side; the proxy mints and returns the token.
+    const url = cfg.proxyUrl ? oaBase() + '/realtime-token' : oaBase() + '/realtime/client_secrets';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: oaHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ session: session })
+    });
+    if (!res.ok) throw await oaError(res);
+
+    const j = await res.json();
+    if (!j.value) throw new Error('No ephemeral token in the response');
+    return j.value;
+  }
+
+  /* handlers: onStatus, onMode, onMessage(role,text), onError, onLevel */
+  async function realtimeStart(handlers) {
+    const h = handlers || {};
+    if (h.onStatus) h.onStatus('connecting');
+
+    const token = await mintToken();
+
+    pc = new RTCPeerConnection();
+
+    // Remote audio: the agent's voice.
+    rtAudio = new Audio();
+    rtAudio.autoplay = true;
+    pc.ontrack = e => { rtAudio.srcObject = e.streams[0]; };
+
+    rtStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    rtStream.getTracks().forEach(tr => pc.addTrack(tr, rtStream));
+
+    dc = pc.createDataChannel('oai-events');
+    dc.addEventListener('message', ev => {
+      let m;
+      try { m = JSON.parse(ev.data); } catch (_) { return; }
+      handleRealtimeEvent(m, h);
+    });
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    // The SDK posts this as multipart with `sdp` and `session` parts.
+    const form = new FormData();
+    form.append('sdp', offer.sdp);
+    form.append('session', JSON.stringify({ type: 'realtime', model: cfg.realtimeModel }));
+
+    const sdpRes = await fetch('https://api.openai.com/v1/realtime/calls', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: form
+    });
+    if (!sdpRes.ok) throw await oaError(sdpRes);
+
+    await pc.setRemoteDescription({ type: 'answer', sdp: await sdpRes.text() });
+    if (h.onStatus) h.onStatus('connected');
+
+    if (h.onLevel && rtStream) startRtLevel(h.onLevel);
+    return true;
+  }
+
+  /* Map the realtime event stream onto the UI's speaking/listening/transcript. */
+  function handleRealtimeEvent(m, h) {
+    const type = m.type || '';
+
+    if (type === 'response.output_audio.done' || type === 'response.done') {
+      if (h.onMode) h.onMode('listening');
+    } else if (type === 'response.created' || type === 'response.output_audio.delta') {
+      if (h.onMode) h.onMode('speaking');
+    } else if (type === 'input_audio_buffer.speech_started') {
+      if (h.onMode) h.onMode('listening');
+    }
+
+    // What the agent said.
+    if (type === 'response.output_audio_transcript.done' && m.transcript) {
+      if (h.onMessage) h.onMessage('agent', m.transcript);
+    }
+    // What the rep said.
+    if (type === 'conversation.item.input_audio_transcription.completed' && m.transcript) {
+      if (h.onMessage) h.onMessage('user', m.transcript);
+    }
+    if (type === 'error') {
+      const msg = (m.error && m.error.message) || 'Realtime error';
+      if (h.onError) h.onError(msg);
+    }
+  }
+
+  function startRtLevel(onLevel) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const an = ctx.createAnalyser();
+      an.fftSize = 512;
+      ctx.createMediaStreamSource(rtStream).connect(an);
+      const data = new Uint8Array(an.frequencyBinCount);
+      (function loop() {
+        if (!pc) { ctx.close().catch(() => {}); return; }
+        an.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) { const v = (data[i] - 128) / 128; sum += v * v; }
+        onLevel(Math.min(1, Math.sqrt(sum / data.length) * 6));
+        rtLevel = requestAnimationFrame(loop);
+      })();
+    } catch (_) {}
+  }
+
+  function realtimeStop() {
+    if (rtLevel) { cancelAnimationFrame(rtLevel); rtLevel = null; }
+    if (dc) { try { dc.close(); } catch (_) {} dc = null; }
+    if (rtStream) { rtStream.getTracks().forEach(tr => tr.stop()); rtStream = null; }
+    if (rtAudio) { try { rtAudio.pause(); } catch (_) {} rtAudio.srcObject = null; rtAudio = null; }
+    if (pc) { try { pc.close(); } catch (_) {} pc = null; }
+  }
+
+  function realtimeMute(muted) {
+    if (rtStream) rtStream.getAudioTracks().forEach(tr => { tr.enabled = !muted; });
+  }
+
+  const realtimeActive = () => !!pc;
+
   /* ── Export ─────────────────────────────────────────────────────── */
 
   window.FelixVoice = {
     VOICES,
+    OA_VOICES,
+    freeForm,
+    realtime: { start: realtimeStart, stop: realtimeStop, mute: realtimeMute, active: realtimeActive },
     config: () => Object.assign({}, cfg),
     setConfig,
     engine,
@@ -1772,7 +2128,8 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
     listening: false,
     muted: false,
     dictating: false,
-    agentMode: false
+    agentMode: false,
+    realtimeMode: false
   };
 
   /* ── Clock ──────────────────────────────────────────────────────── */
@@ -2036,6 +2393,23 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
 
     const ghost = thinking();
 
+    if (Voice.freeForm()) {
+      window.FelixBrain.ask(clean, Voice.config()).then(text => {
+        ghost.remove();
+        addMessage('felix', text, []);
+        speak(text);
+        state.busy = false;
+      }).catch(err => {
+        ghost.remove();
+        showBanner('OpenAI request failed: ' + err.message + ' — answering from the script instead.');
+        const r = reply(clean);
+        addMessage('felix', r.text, r.blocks);
+        speak(r.speech || r.text.replace(/\*\*/g, ''));
+        state.busy = false;
+      });
+      return;
+    }
+
     setTimeout(() => {
       ghost.remove();
       const r = reply(clean);
@@ -2055,6 +2429,7 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
     state.fallbackIndex = 0;
     state.busy = false;
     state.mode = 'welcome';
+    if (window.FelixBrain) window.FelixBrain.reset();
     el.thread.innerHTML = '';
     el.welcome.hidden = false;
     el.input.value = '';
@@ -2088,7 +2463,10 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
         el.call.classList.remove('is-speaking');
         if (onDone) onDone();
       },
-      onError: err => showBanner('ElevenLabs voice failed (' + err.message + ') — falling back to the browser voice.')
+      onError: err => {
+        const name = { elevenlabs: 'ElevenLabs', openai: 'OpenAI' }[Voice.engine()] || 'The';
+        showBanner(name + ' voice failed (' + err.message + ') — falling back to the browser voice.');
+      }
     });
   }
 
@@ -2193,7 +2571,8 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
     el.call.hidden = false;
     setCallState('Connecting\u2026', 'Speak naturally');
 
-    if (Voice.engine() === 'agent') { startAgentCall(); return; }
+    if (Voice.engine() === 'agent')  { startAgentCall(); return; }
+    if (Voice.engine() === 'openai') { startRealtimeCall(); return; }
 
     if (!SR) showBanner('This browser can\u2019t listen \u2014 speech recognition needs Chrome, Edge, or Safari. FELIX will still speak; use End Conversation and type instead.');
 
@@ -2309,8 +2688,55 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
     try { recog.start(); startMeter(); } catch (_) {}
   }
 
+  /* ── Live call, OpenAI Realtime ─────────────────────────────────────
+   * Speech to speech: OpenAI owns recognition, the model, the voice and
+   * barge-in. We only mirror its events into this UI.
+   * ------------------------------------------------------------------ */
+
+  function startRealtimeCall() {
+    state.realtimeMode = true;
+    setCallState('Connecting\u2026', 'Starting the OpenAI realtime session');
+
+    const handlers = {
+      onStatus: s => {
+        if (state.mode !== 'call') return;
+        if (s === 'connecting') setCallState('Connecting\u2026', 'Starting the OpenAI realtime session');
+        if (s === 'connected')  setCallState('Connected', 'Speak naturally');
+      },
+      onMode: mode => {
+        if (state.mode !== 'call') return;
+        if (mode === 'speaking') {
+          el.call.classList.remove('is-listening');
+          el.call.classList.add('is-speaking');
+          setCallState('Agent is speaking\u2026', 'Speak naturally');
+        } else {
+          el.call.classList.remove('is-speaking');
+          el.call.classList.add('is-listening');
+          setCallState('Listening\u2026', 'Speak naturally');
+        }
+      },
+      onMessage: (role, text) => {
+        if (state.mode !== 'call' || !text) return;
+        liveTurn(role === 'user' ? 'you' : 'agent', text);
+      },
+      onLevel: v => el.call.style.setProperty('--level', String(v || 0)),
+      onError: msg => showBanner('OpenAI realtime: ' + msg)
+    };
+
+    Voice.realtime.start(handlers).catch(err => {
+      showBanner('Could not start the OpenAI realtime session (' + err.message + '). Falling back to the scripted voice.');
+      state.realtimeMode = false;
+      setTimeout(() => {
+        const g = SCRIPT.callGreeting;
+        liveTurn('agent', g.text);
+        agentSays(g.speech || g.text);
+      }, 400);
+    });
+  }
+
   function endCall() {
     if (state.agentMode) { Voice.agent.stop(); state.agentMode = false; agentTurn = null; }
+    if (state.realtimeMode) { Voice.realtime.stop(); state.realtimeMode = false; }
     state.mode = el.thread.children.length ? 'chat' : 'welcome';
     el.welcome.hidden = state.mode === 'chat';
     cancelSpeech();
@@ -2325,7 +2751,7 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
 
   /* Tap the orb to interrupt FELIX mid-sentence. */
   el.orb.addEventListener('click', () => {
-    if (state.agentMode) return;   // the ElevenLabs agent handles barge-in natively
+    if (state.agentMode || state.realtimeMode) return;   // both handle barge-in natively
     if (state.speaking) { cancelSpeech(); listenInCall(); }
     else if (!state.listening) listenInCall();
   });
@@ -2334,6 +2760,11 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
     state.muted = !state.muted;
     el.callMic.classList.toggle('is-muted', state.muted);
 
+    if (state.realtimeMode) {
+      Voice.realtime.mute(state.muted);
+      setCallState(state.muted ? 'Muted' : 'Listening\u2026', state.muted ? 'Tap the mic to unmute' : 'Speak naturally');
+      return;
+    }
     if (state.agentMode) {
       Voice.agent.mute(state.muted);
       setCallState(state.muted ? 'Muted' : 'Listening\u2026', state.muted ? 'Tap the mic to unmute' : 'Speak naturally');
@@ -2392,12 +2823,32 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
   const sheet = $('settings');
   const sheetMsg = $('sheet-msg');
   const fldKey = $('el-key'), fldVoice = $('el-voice'), fldModel = $('el-model'), fldAgent = $('el-agent');
+  const oaProxy = $('oa-proxy'), oaKey = $('oa-key'), oaVoice = $('oa-voice'),
+        oaChat = $('oa-chat'), oaRealtime = $('oa-realtime'), oaWarn = $('oa-warn');
 
   Voice.VOICES.forEach(v => {
     const o = document.createElement('option');
     o.value = v.id; o.textContent = v.name;
     fldVoice.appendChild(o);
   });
+
+  Voice.OA_VOICES.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    oaVoice.appendChild(o);
+  });
+
+  /* The warning depends on where the key actually lives. */
+  function oaWarning() {
+    if (oaProxy.value.trim()) {
+      oaWarn.innerHTML = 'Using the proxy. Your key stays on the server and never reaches this page — the safe option.';
+      oaWarn.className = 'warn-note good-note';
+    } else {
+      oaWarn.innerHTML = 'Without a proxy the key is stored in this browser and sent straight to OpenAI from the page. Fine on your own machine — for a shared link, run <code>node server.js</code> and use the proxy instead.';
+      oaWarn.className = 'warn-note';
+    }
+  }
+  oaProxy.addEventListener('input', oaWarning);
 
   function syncFields() {
     const picked = document.querySelector('input[name="engine"]:checked');
@@ -2414,6 +2865,12 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
     fldVoice.value = c.voiceId;
     fldModel.value = c.modelId;
     fldAgent.value = c.agentId;
+    oaProxy.value = c.proxyUrl;
+    oaKey.value = c.openaiKey;
+    oaVoice.value = c.oaVoice;
+    oaChat.value = c.chatModel;
+    oaRealtime.value = c.realtimeModel;
+    oaWarning();
     syncFields();
   }
 
@@ -2434,7 +2891,12 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
       apiKey:  fldKey.value.trim(),
       voiceId: fldVoice.value,
       modelId: fldModel.value,
-      agentId: fldAgent.value.trim()
+      agentId: fldAgent.value.trim(),
+      proxyUrl: oaProxy.value.trim(),
+      openaiKey: oaKey.value.trim(),
+      oaVoice: oaVoice.value,
+      chatModel: oaChat.value,
+      realtimeModel: oaRealtime.value
     });
 
     const chosen = picked ? picked.value : 'browser';
@@ -2444,14 +2906,19 @@ window.FELIX_SCRIPT = FELIX_SCRIPT;
     if (chosen !== 'browser' && active === 'browser') {
       sheetSay(chosen === 'agent'
         ? 'Saved, but no agent ID — still using the browser voice.'
-        : 'Saved, but no API key — still using the browser voice.', false);
+        : chosen === 'openai'
+          ? 'Saved, but no proxy URL or API key — still using the browser voice.'
+          : 'Saved, but no API key — still using the browser voice.', false);
       return;
     }
     sheetSay(active === 'agent'
       ? 'Saved. Start a voice call and the ElevenLabs agent takes over.'
       : active === 'elevenlabs'
         ? 'Saved. FELIX now speaks with an ElevenLabs voice.'
-        : 'Saved. Using the browser voice.', true);
+        : active === 'openai'
+          ? 'Saved. GPT now answers, and voice calls run on the Realtime API.'
+          : 'Saved. Using the browser voice.', true);
+    if (window.FelixBrain) window.FelixBrain.reset();
   }
 
   $('btn-settings').addEventListener('click', () => { loadSettings(); sheetMsg.hidden = true; sheet.hidden = false; });

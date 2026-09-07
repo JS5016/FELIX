@@ -252,6 +252,48 @@
           <p class="warn-note">Create an agent at elevenlabs.io, set it <strong>public</strong> (authentication disabled), and paste its ID. No API key is needed or stored. Use the prompt in <code>AGENT-PROMPT.md</code> so it answers as FELIX.</p>
         </div>
 
+        <label class="opt">
+          <input type="radio" name="engine" value="openai" />
+          <span class="opt-body">
+            <strong>OpenAI <span class="badge">free-form</span></strong>
+            <em>GPT answers instead of the script, speaks with an OpenAI voice, and a voice call runs on the Realtime API — speech to speech, with barge-in.</em>
+          </span>
+        </label>
+
+        <div class="opt-fields" data-for="openai">
+          <label class="fld">
+            <span>Proxy URL — recommended, keeps the key off the browser</span>
+            <input type="text" id="oa-proxy" placeholder="/api  (run: OPENAI_API_KEY=sk-… node server.js)" autocomplete="off" spellcheck="false" />
+          </label>
+          <p class="or-sep">or</p>
+          <label class="fld">
+            <span>API key — used only if no proxy URL is set</span>
+            <input type="password" id="oa-key" placeholder="sk-…" autocomplete="off" spellcheck="false" />
+          </label>
+          <label class="fld">
+            <span>Voice</span>
+            <select id="oa-voice"></select>
+          </label>
+          <label class="fld">
+            <span>Chat model</span>
+            <select id="oa-chat">
+              <option value="gpt-5.2">gpt-5.2 — best quality</option>
+              <option value="gpt-5.1">gpt-5.1</option>
+              <option value="gpt-5-mini">gpt-5-mini — cheaper, quicker</option>
+              <option value="gpt-4.1-mini">gpt-4.1-mini — cheapest</option>
+            </select>
+          </label>
+          <label class="fld">
+            <span>Realtime model — used for voice calls</span>
+            <select id="oa-realtime">
+              <option value="gpt-realtime-2.1">gpt-realtime-2.1</option>
+              <option value="gpt-realtime-2.1-mini">gpt-realtime-2.1-mini — cheaper</option>
+              <option value="gpt-realtime-2">gpt-realtime-2</option>
+            </select>
+          </label>
+          <p class="warn-note" id="oa-warn"></p>
+        </div>
+
         <div class="sheet-msg" id="sheet-msg" hidden></div>
       </div>
 
@@ -268,6 +310,8 @@
 </div>
 
 <script src="assets/script-data.js"></script>
+<script src="assets/persona.js"></script>
+<script src="assets/brain.js"></script>
 <script src="assets/voice.js"></script>
 <script src="assets/app.js"></script>
 </body>

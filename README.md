@@ -6,17 +6,49 @@ screenshots of the real product (Veeva CRM shell, orange theme, live voice call)
 
 It runs entirely in the browser. No build step, no server, and no API key required.
 
-Three voice engines, switchable at runtime from the **gear** button:
+Four engines, switchable at runtime from the **gear** button:
 
-| Engine | Conversation | Voice | Setup |
-| --- | --- | --- | --- |
-| **Browser** (default) | scripted | `speechSynthesis` | none |
-| **ElevenLabs voice** | scripted | ElevenLabs TTS | API key |
-| **ElevenLabs agent** | real LLM, free-form | ElevenLabs | public agent ID |
+| Engine | Who answers | Voice | Live call | Setup |
+| --- | --- | --- | --- | --- |
+| **Browser** (default) | script | `speechSynthesis` | Web Speech | none |
+| **ElevenLabs voice** | script | ElevenLabs TTS | Web Speech | ElevenLabs key |
+| **ElevenLabs agent** | its own LLM | ElevenLabs | native, barge-in | public agent ID |
+| **OpenAI** | GPT, free-form | OpenAI TTS | Realtime API, speech-to-speech | OpenAI key or proxy |
 
-The default keeps a plain deployment working with zero configuration. See
-[AGENT-PROMPT.md](AGENT-PROMPT.md) for the agent setup and a ready-to-paste
-FELIX system prompt.
+The default keeps a plain deployment working with zero configuration. Every engine
+degrades to the one above it rather than failing silently.
+
+## Using OpenAI
+
+The **OpenAI** engine replaces the keyword matcher with a real model, so FELIX answers
+anything rather than only the scripted branches — and a voice call becomes a true
+speech-to-speech session with natural interruption.
+
+Two ways to supply the key.
+
+**With the proxy — recommended, key never enters the browser:**
+
+```bash
+export OPENAI_API_KEY=sk-...
+node server.js          # serves the app and proxies OpenAI on /api
+```
+
+Open <http://localhost:8000>, then **gear → OpenAI → Proxy URL: `/api`**. The browser
+only ever talks to your own server, which mints short-lived realtime tokens and
+forwards chat and speech requests.
+
+**Without a proxy:** paste the key into **gear → OpenAI → API key**. It is stored in
+that browser's `localStorage` and sent straight to OpenAI from the page. That is fine
+on your own machine, but don't do it on a link you share — use the proxy instead. The
+settings panel says which of the two is in force.
+
+Nothing is ever committed: keys, proxy URLs, and agent IDs live only in `localStorage`,
+and `server.js` reads the key from the environment.
+
+See [AGENT-PROMPT.md](AGENT-PROMPT.md) for the ElevenLabs agent setup. The FELIX
+persona in `assets/persona.js` is the single source of truth — it is the system prompt
+for OpenAI chat, the `instructions` on a realtime session, and the text you paste into
+an ElevenLabs agent.
 
 ## Run it
 
@@ -124,18 +156,31 @@ the orb, `onMessage` fills the transcript, `getInputVolume()` scales the orb, an
 credential is ever in the page. If the SDK cannot load, the call falls back to the
 scripted voice with a visible banner.
 
+**OpenAI** uses `POST /v1/chat/completions` for typed turns (`assets/brain.js`, keeping
+the last 16 messages), `POST /v1/audio/speech` with `gpt-4o-mini-tts` for the voice, and
+for a live call mints an ephemeral token at `POST /v1/realtime/client_secrets` then
+exchanges SDP at `POST /v1/realtime/calls` over WebRTC. Endpoints and model names were
+taken from `openai` 7.10.0 — note the older `/realtime/sessions` beta endpoint no longer
+connects.
+
 ## Files
 
 ```
 index.html              Veeva shell, tabs, welcome / chat / call views, settings sheet
 assets/styles.css       light orange theme and components
-assets/voice.js         voice engines: browser, ElevenLabs TTS, ElevenLabs agent
-assets/app.js           call state machine, script matching, rendering
+assets/persona.js       who FELIX is — shared by every free-form engine
 assets/script-data.js   the scripted conversation — edit this to change the demo
+assets/brain.js         OpenAI chat completions
+assets/voice.js         engines: browser, ElevenLabs TTS/agent, OpenAI TTS/realtime
+assets/app.js           call state machine, script matching, rendering
+server.js               optional: serves the app and proxies OpenAI, key server-side
 AGENT-PROMPT.md         ElevenLabs agent setup + the FELIX system prompt
 build-standalone.js     inlines everything into felix-standalone.html
 felix-standalone.html   single-file build, opens with no server
 ```
+
+Note the standalone build cannot use the proxy (there is no server), so it is browser,
+ElevenLabs, or a browser-held OpenAI key.
 
 ## Notes
 

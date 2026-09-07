@@ -9,7 +9,13 @@ const read = p => fs.readFileSync(path.join(__dirname, p), 'utf8');
 // Escaping "</script" keeps an inlined string from closing the tag early.
 const safe = s => s.replace(/<\/script/gi, '<\\/script');
 
-const SCRIPTS = ['assets/script-data.js', 'assets/voice.js', 'assets/app.js'];
+const SCRIPTS = [
+  'assets/script-data.js',
+  'assets/persona.js',
+  'assets/brain.js',
+  'assets/voice.js',
+  'assets/app.js',
+];
 
 let html = read('index.html').replace(
   '<link rel="stylesheet" href="assets/styles.css" />',

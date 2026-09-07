@@ -34,12 +34,23 @@
     { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel — authoritative' }
   ];
 
+  /* Verified against openai-node 7.10.0. */
+  const OA_VOICES = ['marin', 'cedar', 'alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse'];
+
   const DEFAULTS = {
     engine: 'browser',
     apiKey: '',
     voiceId: VOICES[0].id,
     modelId: 'eleven_flash_v2_5',   // ~75 ms; turbo_v2_5 trades latency for polish
-    agentId: ''
+    agentId: '',
+
+    /* OpenAI */
+    openaiKey: '',
+    proxyUrl: '',                       // set this and the key never enters the browser
+    chatModel: 'gpt-5.2',
+    ttsModel: 'gpt-4o-mini-tts',
+    oaVoice: 'marin',
+    realtimeModel: 'gpt-realtime-2.1'
   };
 
   /* ── Config ─────────────────────────────────────────────────────── */
@@ -60,7 +71,28 @@
   function engine() {
     if (cfg.engine === 'agent' && cfg.agentId) return 'agent';
     if (cfg.engine === 'elevenlabs' && cfg.apiKey) return 'elevenlabs';
+    if (cfg.engine === 'openai' && (cfg.openaiKey || cfg.proxyUrl)) return 'openai';
     return 'browser';
+  }
+
+  /* True when a real model, not the keyword matcher, should answer. */
+  const freeForm = () => engine() === 'openai';
+
+  const oaBase = () => cfg.proxyUrl ? cfg.proxyUrl.replace(/\/$/, '') : 'https://api.openai.com/v1';
+
+  function oaHeaders(extra) {
+    const h = Object.assign({}, extra || {});
+    if (!cfg.proxyUrl) h['Authorization'] = 'Bearer ' + cfg.openaiKey;
+    return h;
+  }
+
+  async function oaError(res) {
+    let msg = res.status + ' ' + res.statusText;
+    try {
+      const j = await res.json();
+      if (j && j.error && j.error.message) msg = j.error.message;
+    } catch (_) {}
+    return new Error(msg);
   }
 
   /* ── Browser speech synthesis ───────────────────────────────────── */
@@ -142,6 +174,45 @@
     });
   }
 
+  /* ── OpenAI text to speech ──────────────────────────────────────── */
+
+  const oaCache = new Map();
+
+  async function fetchOaSpeech(text) {
+    if (oaCache.has(text)) return oaCache.get(text);
+
+    const url = cfg.proxyUrl ? oaBase() + '/speech' : oaBase() + '/audio/speech';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: oaHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        model: cfg.ttsModel,
+        voice: cfg.oaVoice,
+        input: text,
+        response_format: 'mp3',
+        instructions: 'Speak like a calm, efficient colleague on a phone call. Brisk but never clipped.'
+      })
+    });
+    if (!res.ok) throw await oaError(res);
+
+    const objUrl = URL.createObjectURL(await res.blob());
+    if (oaCache.size < 40) oaCache.set(text, objUrl);
+    return objUrl;
+  }
+
+  function speakOa(text, onStart, onDone, onFail) {
+    fetchOaSpeech(text).then(url => {
+      audioEl = new Audio(url);
+      audioEl.onplay = () => { if (onStart) onStart(); };
+      audioEl.onended = () => { if (onDone) onDone(); };
+      audioEl.onerror = () => { if (onDone) onDone(); };
+      return audioEl.play();
+    }).catch(err => {
+      if (onFail) onFail(err);
+      speakBrowser(text, onStart, onDone);
+    });
+  }
+
   /* ── Public speak / cancel ──────────────────────────────────────── */
 
   function speak(text, opts) {
@@ -149,8 +220,10 @@
     cancel();
     if (!text) { if (opts.onDone) opts.onDone(); return; }
 
-    if (engine() === 'elevenlabs') speakEleven(text, opts.onStart, opts.onDone, opts.onError);
-    else speakBrowser(text, opts.onStart, opts.onDone);
+    const e = engine();
+    if (e === 'elevenlabs')  speakEleven(text, opts.onStart, opts.onDone, opts.onError);
+    else if (e === 'openai') speakOa(text, opts.onStart, opts.onDone, opts.onError);
+    else                     speakBrowser(text, opts.onStart, opts.onDone);
   }
 
   function cancel() {
@@ -233,10 +306,151 @@
 
   const agentActive = () => !!session;
 
+  /* ── OpenAI Realtime, speech to speech over WebRTC ──────────────────
+   * Verified against openai-node 7.10.0:
+   *   POST /v1/realtime/client_secrets  -> { value: "ek_..." }   (ephemeral)
+   *   POST /v1/realtime/calls           -> SDP answer            (multipart)
+   * The older /realtime/sessions beta endpoint no longer connects.
+   * ------------------------------------------------------------------ */
+
+  let pc = null, dc = null, rtAudio = null, rtStream = null, rtLevel = null;
+
+  async function mintToken() {
+    const session = {
+      type: 'realtime',
+      model: cfg.realtimeModel,
+      instructions: window.FELIX_PERSONA.systemPrompt,
+      audio: {
+        input: { transcription: { model: 'gpt-4o-mini-transcribe' } },
+        output: { voice: cfg.oaVoice }
+      }
+    };
+
+    // With a proxy the key stays server-side; the proxy mints and returns the token.
+    const url = cfg.proxyUrl ? oaBase() + '/realtime-token' : oaBase() + '/realtime/client_secrets';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: oaHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ session: session })
+    });
+    if (!res.ok) throw await oaError(res);
+
+    const j = await res.json();
+    if (!j.value) throw new Error('No ephemeral token in the response');
+    return j.value;
+  }
+
+  /* handlers: onStatus, onMode, onMessage(role,text), onError, onLevel */
+  async function realtimeStart(handlers) {
+    const h = handlers || {};
+    if (h.onStatus) h.onStatus('connecting');
+
+    const token = await mintToken();
+
+    pc = new RTCPeerConnection();
+
+    // Remote audio: the agent's voice.
+    rtAudio = new Audio();
+    rtAudio.autoplay = true;
+    pc.ontrack = e => { rtAudio.srcObject = e.streams[0]; };
+
+    rtStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    rtStream.getTracks().forEach(tr => pc.addTrack(tr, rtStream));
+
+    dc = pc.createDataChannel('oai-events');
+    dc.addEventListener('message', ev => {
+      let m;
+      try { m = JSON.parse(ev.data); } catch (_) { return; }
+      handleRealtimeEvent(m, h);
+    });
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    // The SDK posts this as multipart with `sdp` and `session` parts.
+    const form = new FormData();
+    form.append('sdp', offer.sdp);
+    form.append('session', JSON.stringify({ type: 'realtime', model: cfg.realtimeModel }));
+
+    const sdpRes = await fetch('https://api.openai.com/v1/realtime/calls', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: form
+    });
+    if (!sdpRes.ok) throw await oaError(sdpRes);
+
+    await pc.setRemoteDescription({ type: 'answer', sdp: await sdpRes.text() });
+    if (h.onStatus) h.onStatus('connected');
+
+    if (h.onLevel && rtStream) startRtLevel(h.onLevel);
+    return true;
+  }
+
+  /* Map the realtime event stream onto the UI's speaking/listening/transcript. */
+  function handleRealtimeEvent(m, h) {
+    const type = m.type || '';
+
+    if (type === 'response.output_audio.done' || type === 'response.done') {
+      if (h.onMode) h.onMode('listening');
+    } else if (type === 'response.created' || type === 'response.output_audio.delta') {
+      if (h.onMode) h.onMode('speaking');
+    } else if (type === 'input_audio_buffer.speech_started') {
+      if (h.onMode) h.onMode('listening');
+    }
+
+    // What the agent said.
+    if (type === 'response.output_audio_transcript.done' && m.transcript) {
+      if (h.onMessage) h.onMessage('agent', m.transcript);
+    }
+    // What the rep said.
+    if (type === 'conversation.item.input_audio_transcription.completed' && m.transcript) {
+      if (h.onMessage) h.onMessage('user', m.transcript);
+    }
+    if (type === 'error') {
+      const msg = (m.error && m.error.message) || 'Realtime error';
+      if (h.onError) h.onError(msg);
+    }
+  }
+
+  function startRtLevel(onLevel) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const an = ctx.createAnalyser();
+      an.fftSize = 512;
+      ctx.createMediaStreamSource(rtStream).connect(an);
+      const data = new Uint8Array(an.frequencyBinCount);
+      (function loop() {
+        if (!pc) { ctx.close().catch(() => {}); return; }
+        an.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) { const v = (data[i] - 128) / 128; sum += v * v; }
+        onLevel(Math.min(1, Math.sqrt(sum / data.length) * 6));
+        rtLevel = requestAnimationFrame(loop);
+      })();
+    } catch (_) {}
+  }
+
+  function realtimeStop() {
+    if (rtLevel) { cancelAnimationFrame(rtLevel); rtLevel = null; }
+    if (dc) { try { dc.close(); } catch (_) {} dc = null; }
+    if (rtStream) { rtStream.getTracks().forEach(tr => tr.stop()); rtStream = null; }
+    if (rtAudio) { try { rtAudio.pause(); } catch (_) {} rtAudio.srcObject = null; rtAudio = null; }
+    if (pc) { try { pc.close(); } catch (_) {} pc = null; }
+  }
+
+  function realtimeMute(muted) {
+    if (rtStream) rtStream.getAudioTracks().forEach(tr => { tr.enabled = !muted; });
+  }
+
+  const realtimeActive = () => !!pc;
+
   /* ── Export ─────────────────────────────────────────────────────── */
 
   window.FelixVoice = {
     VOICES,
+    OA_VOICES,
+    freeForm,
+    realtime: { start: realtimeStart, stop: realtimeStop, mute: realtimeMute, active: realtimeActive },
     config: () => Object.assign({}, cfg),
     setConfig,
     engine,

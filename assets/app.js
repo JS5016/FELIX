@@ -45,7 +45,8 @@
     listening: false,
     muted: false,
     dictating: false,
-    agentMode: false
+    agentMode: false,
+    realtimeMode: false
   };
 
   /* ── Clock ──────────────────────────────────────────────────────── */
@@ -309,6 +310,23 @@
 
     const ghost = thinking();
 
+    if (Voice.freeForm()) {
+      window.FelixBrain.ask(clean, Voice.config()).then(text => {
+        ghost.remove();
+        addMessage('felix', text, []);
+        speak(text);
+        state.busy = false;
+      }).catch(err => {
+        ghost.remove();
+        showBanner('OpenAI request failed: ' + err.message + ' — answering from the script instead.');
+        const r = reply(clean);
+        addMessage('felix', r.text, r.blocks);
+        speak(r.speech || r.text.replace(/\*\*/g, ''));
+        state.busy = false;
+      });
+      return;
+    }
+
     setTimeout(() => {
       ghost.remove();
       const r = reply(clean);
@@ -328,6 +346,7 @@
     state.fallbackIndex = 0;
     state.busy = false;
     state.mode = 'welcome';
+    if (window.FelixBrain) window.FelixBrain.reset();
     el.thread.innerHTML = '';
     el.welcome.hidden = false;
     el.input.value = '';
@@ -361,7 +380,10 @@
         el.call.classList.remove('is-speaking');
         if (onDone) onDone();
       },
-      onError: err => showBanner('ElevenLabs voice failed (' + err.message + ') — falling back to the browser voice.')
+      onError: err => {
+        const name = { elevenlabs: 'ElevenLabs', openai: 'OpenAI' }[Voice.engine()] || 'The';
+        showBanner(name + ' voice failed (' + err.message + ') — falling back to the browser voice.');
+      }
     });
   }
 
@@ -466,7 +488,8 @@
     el.call.hidden = false;
     setCallState('Connecting\u2026', 'Speak naturally');
 
-    if (Voice.engine() === 'agent') { startAgentCall(); return; }
+    if (Voice.engine() === 'agent')  { startAgentCall(); return; }
+    if (Voice.engine() === 'openai') { startRealtimeCall(); return; }
 
     if (!SR) showBanner('This browser can\u2019t listen \u2014 speech recognition needs Chrome, Edge, or Safari. FELIX will still speak; use End Conversation and type instead.');
 
@@ -582,8 +605,55 @@
     try { recog.start(); startMeter(); } catch (_) {}
   }
 
+  /* ── Live call, OpenAI Realtime ─────────────────────────────────────
+   * Speech to speech: OpenAI owns recognition, the model, the voice and
+   * barge-in. We only mirror its events into this UI.
+   * ------------------------------------------------------------------ */
+
+  function startRealtimeCall() {
+    state.realtimeMode = true;
+    setCallState('Connecting\u2026', 'Starting the OpenAI realtime session');
+
+    const handlers = {
+      onStatus: s => {
+        if (state.mode !== 'call') return;
+        if (s === 'connecting') setCallState('Connecting\u2026', 'Starting the OpenAI realtime session');
+        if (s === 'connected')  setCallState('Connected', 'Speak naturally');
+      },
+      onMode: mode => {
+        if (state.mode !== 'call') return;
+        if (mode === 'speaking') {
+          el.call.classList.remove('is-listening');
+          el.call.classList.add('is-speaking');
+          setCallState('Agent is speaking\u2026', 'Speak naturally');
+        } else {
+          el.call.classList.remove('is-speaking');
+          el.call.classList.add('is-listening');
+          setCallState('Listening\u2026', 'Speak naturally');
+        }
+      },
+      onMessage: (role, text) => {
+        if (state.mode !== 'call' || !text) return;
+        liveTurn(role === 'user' ? 'you' : 'agent', text);
+      },
+      onLevel: v => el.call.style.setProperty('--level', String(v || 0)),
+      onError: msg => showBanner('OpenAI realtime: ' + msg)
+    };
+
+    Voice.realtime.start(handlers).catch(err => {
+      showBanner('Could not start the OpenAI realtime session (' + err.message + '). Falling back to the scripted voice.');
+      state.realtimeMode = false;
+      setTimeout(() => {
+        const g = SCRIPT.callGreeting;
+        liveTurn('agent', g.text);
+        agentSays(g.speech || g.text);
+      }, 400);
+    });
+  }
+
   function endCall() {
     if (state.agentMode) { Voice.agent.stop(); state.agentMode = false; agentTurn = null; }
+    if (state.realtimeMode) { Voice.realtime.stop(); state.realtimeMode = false; }
     state.mode = el.thread.children.length ? 'chat' : 'welcome';
     el.welcome.hidden = state.mode === 'chat';
     cancelSpeech();
@@ -598,7 +668,7 @@
 
   /* Tap the orb to interrupt FELIX mid-sentence. */
   el.orb.addEventListener('click', () => {
-    if (state.agentMode) return;   // the ElevenLabs agent handles barge-in natively
+    if (state.agentMode || state.realtimeMode) return;   // both handle barge-in natively
     if (state.speaking) { cancelSpeech(); listenInCall(); }
     else if (!state.listening) listenInCall();
   });
@@ -607,6 +677,11 @@
     state.muted = !state.muted;
     el.callMic.classList.toggle('is-muted', state.muted);
 
+    if (state.realtimeMode) {
+      Voice.realtime.mute(state.muted);
+      setCallState(state.muted ? 'Muted' : 'Listening\u2026', state.muted ? 'Tap the mic to unmute' : 'Speak naturally');
+      return;
+    }
     if (state.agentMode) {
       Voice.agent.mute(state.muted);
       setCallState(state.muted ? 'Muted' : 'Listening\u2026', state.muted ? 'Tap the mic to unmute' : 'Speak naturally');
@@ -665,12 +740,32 @@
   const sheet = $('settings');
   const sheetMsg = $('sheet-msg');
   const fldKey = $('el-key'), fldVoice = $('el-voice'), fldModel = $('el-model'), fldAgent = $('el-agent');
+  const oaProxy = $('oa-proxy'), oaKey = $('oa-key'), oaVoice = $('oa-voice'),
+        oaChat = $('oa-chat'), oaRealtime = $('oa-realtime'), oaWarn = $('oa-warn');
 
   Voice.VOICES.forEach(v => {
     const o = document.createElement('option');
     o.value = v.id; o.textContent = v.name;
     fldVoice.appendChild(o);
   });
+
+  Voice.OA_VOICES.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    oaVoice.appendChild(o);
+  });
+
+  /* The warning depends on where the key actually lives. */
+  function oaWarning() {
+    if (oaProxy.value.trim()) {
+      oaWarn.innerHTML = 'Using the proxy. Your key stays on the server and never reaches this page — the safe option.';
+      oaWarn.className = 'warn-note good-note';
+    } else {
+      oaWarn.innerHTML = 'Without a proxy the key is stored in this browser and sent straight to OpenAI from the page. Fine on your own machine — for a shared link, run <code>node server.js</code> and use the proxy instead.';
+      oaWarn.className = 'warn-note';
+    }
+  }
+  oaProxy.addEventListener('input', oaWarning);
 
   function syncFields() {
     const picked = document.querySelector('input[name="engine"]:checked');
@@ -687,6 +782,12 @@
     fldVoice.value = c.voiceId;
     fldModel.value = c.modelId;
     fldAgent.value = c.agentId;
+    oaProxy.value = c.proxyUrl;
+    oaKey.value = c.openaiKey;
+    oaVoice.value = c.oaVoice;
+    oaChat.value = c.chatModel;
+    oaRealtime.value = c.realtimeModel;
+    oaWarning();
     syncFields();
   }
 
@@ -707,7 +808,12 @@
       apiKey:  fldKey.value.trim(),
       voiceId: fldVoice.value,
       modelId: fldModel.value,
-      agentId: fldAgent.value.trim()
+      agentId: fldAgent.value.trim(),
+      proxyUrl: oaProxy.value.trim(),
+      openaiKey: oaKey.value.trim(),
+      oaVoice: oaVoice.value,
+      chatModel: oaChat.value,
+      realtimeModel: oaRealtime.value
     });
 
     const chosen = picked ? picked.value : 'browser';
@@ -717,14 +823,19 @@
     if (chosen !== 'browser' && active === 'browser') {
       sheetSay(chosen === 'agent'
         ? 'Saved, but no agent ID — still using the browser voice.'
-        : 'Saved, but no API key — still using the browser voice.', false);
+        : chosen === 'openai'
+          ? 'Saved, but no proxy URL or API key — still using the browser voice.'
+          : 'Saved, but no API key — still using the browser voice.', false);
       return;
     }
     sheetSay(active === 'agent'
       ? 'Saved. Start a voice call and the ElevenLabs agent takes over.'
       : active === 'elevenlabs'
         ? 'Saved. FELIX now speaks with an ElevenLabs voice.'
-        : 'Saved. Using the browser voice.', true);
+        : active === 'openai'
+          ? 'Saved. GPT now answers, and voice calls run on the Realtime API.'
+          : 'Saved. Using the browser voice.', true);
+    if (window.FelixBrain) window.FelixBrain.reset();
   }
 
   $('btn-settings').addEventListener('click', () => { loadSettings(); sheetMsg.hidden = true; sheet.hidden = false; });
