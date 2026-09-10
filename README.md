@@ -148,13 +148,31 @@ Nothing about a practice run is written to the CRM, and FELIX says so on every d
 **Play**, **Pause** and **Stop**: pause holds the sentence and resumes exactly where it
 stopped, and tapping any line plays just that one.
 
-Each of the three speakers (rep, FELIX, Dr. Watanabe) gets a different voice. The page
-ranks the device's installed voices by how natural they actually sound — neural,
-premium and online voices first, the novelty ones last — and gives the rep the best
-*male-sounding* voice that is a real voice; where a device has none, he gets the best
-voice available, pitched down, rather than a robotic one. Paste an ElevenLabs key under
-**Voices** and the whole run plays in studio voices instead; the key stays in that
-browser's `localStorage`.
+Each of the three speakers (rep, FELIX, Dr. Watanabe) gets a different voice, chosen
+under **Voices** from three engines, in this order of preference:
+
+**OpenAI** — the human-sounding option, and the same voices the app's OpenAI engine
+speaks with. Every line is spoken by `gpt-4o-mini-tts` with per-part `instructions`, so
+the rep is directed as a rep in a corridor and Dr. Watanabe as a physician between
+patients; that direction is the difference between acted and read aloud. Defaults are
+Ash for the rep, Sage for FELIX, Coral for Dr. Watanabe. Serve the page from
+`node server.js` and set the proxy to `/api` and the key never reaches the browser:
+
+```bash
+export OPENAI_API_KEY=sk-...
+node server.js      # then open http://localhost:8000/practice-call-audio.html
+```
+
+**ElevenLabs** — paste a key and the run plays in Daniel, Sarah and Charlotte instead.
+
+**This device** — the no-setup fallback. The page ranks installed voices by how natural
+they actually sound (neural, premium and online first, novelty voices last) and gives
+the rep the best *male-sounding* real voice; where a device has none, he gets the best
+voice available pitched down rather than a robotic one. Built-in voices vary hugely
+between machines, so if the rep still sounds synthetic, that is the device — use OpenAI.
+
+Both key fields live only in that browser's `localStorage`, and each line is fetched
+once and cached, with the next line pre-fetched while the current one plays.
 
 The lines are generated from `assets/script-data.js`, so the page cannot drift from
 what the app actually says.
