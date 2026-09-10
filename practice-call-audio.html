@@ -75,7 +75,8 @@
   <h1>Ask FELIX — the practice call, out loud</h1>
   <p>The Fierce Pharma script: the recall, the roleplay with Dr. Watanabe, and the scored debrief.</p>
   <div class="bar">
-    <button id="play">▶ Play the call</button>
+    <button id="play">▶ Play</button>
+    <button id="pause" class="ghost" disabled>❚❚ Pause</button>
     <button id="stop" class="ghost" disabled>■ Stop</button>
     <button id="cfg" class="ghost">Voices</button>
     <span class="rate"><label for="rate">Speed</label><input id="rate" type="range" min="0.7" max="1.4" step="0.05" value="1" /><span id="rateVal">1×</span></span>
@@ -176,13 +177,15 @@
 
   var tts = window.speechSynthesis;
   var els = {
-    play: document.getElementById('play'), stop: document.getElementById('stop'),
-    cfg: document.getElementById('cfg'), panel: document.getElementById('panel'),
+    play: document.getElementById('play'), pause: document.getElementById('pause'),
+    stop: document.getElementById('stop'), cfg: document.getElementById('cfg'),
+    panel: document.getElementById('panel'),
     rate: document.getElementById('rate'), rateVal: document.getElementById('rateVal'),
     note: document.getElementById('note'), key: document.getElementById('el-key')
   };
   var rows = [].slice.call(document.querySelectorAll('.line'));
   var picks = {}, saved = {}, playing = false, at = 0, audio = null;
+  var repShift = 0.95, thin = false, seq = 0, gap = null, inFlight = false;
 
   try { saved = JSON.parse(localStorage.getItem(STORE) || '{}'); } catch (e) { saved = {}; }
   var store = function () { try { localStorage.setItem(STORE, JSON.stringify(saved)); } catch (e) {} };
@@ -192,12 +195,12 @@
      (Edge/Chrome online voices), score above the old formant voices. */
   var TIERS = [
     { re: /(siri|premium|enhanced|neural|natural)/i, s: 60 },
-    { re: /(ava|zoe|evan|nathan|joelle|noelle|serena|matilda|isha|nicky|aaron)/i, s: 45 },
-    { re: /(aria|jenny|guy|emma|michelle|christopher|eric|roger|steffan)/i, s: 40 },
+    { re: /(ava|zoe|evan|nathan|joelle|noelle|serena|matilda|isha|nicky|aaron|tom|liam|adam)/i, s: 45 },
+    { re: /(aria|jenny|emma|michelle|guy|christopher|eric|roger|steffan|andrew|brian|davis|jason|tony|william|matthew)/i, s: 40 },
     { re: /(google (us|uk) english)/i, s: 35 },
-    { re: /(samantha|karen|moira|tessa|daniel|alex|oliver|fiona|rishi)/i, s: 25 },
-    { re: /(zira|david|mark|hazel|susan)/i, s: 12 },
-    { re: /(espeak|festival|pico|compact|eloquence|albert|bad news|bahh|bells|boing|bubbles|cellos|jester|organ|superstar|trinoids|whisper|wobble|zarvox|junior|ralph|kathy|fred|grandma|grandpa|rocko|shelley|sandy|eddy|reed|flo)/i, s: -60 }
+    { re: /(samantha|karen|moira|tessa|daniel|alex|oliver|fiona|rishi|ryan|arthur|gordon)/i, s: 25 },
+    { re: /(zira|david|mark|hazel|susan|catherine|james)/i, s: 12 },
+    { re: /(espeak|festival|pico|compact|eloquence|albert|bad news|bahh|bells|boing|bubbles|cellos|jester|organ|superstar|trinoids|whisper|wobble|zarvox|junior|ralph|kathy|fred|grandma|grandpa|rocko|shelley|sandy|eddy|reed|flo|novelty)/i, s: -60 }
   ];
 
   function quality(v) {
@@ -209,8 +212,17 @@
     return s;
   }
 
-  var femaleish = /(samantha|karen|moira|tessa|victoria|serena|fiona|ava|zoe|allison|susan|zira|aria|jenny|emma|michelle|nicky|joelle|female|woman|charlotte| f\b)/i;
-  var maleish   = /(daniel|alex|fred|oliver|thomas|aaron|david|guy|mark|evan|nathan|christopher|eric|roger|male|man)/i;
+  /* Short tokens are word-anchored on purpose: "man" is inside Samantha and
+     "ava" is inside other names, and a mis-read name is what puts the rep in
+     a woman's voice. */
+  var FEMALE = [/(samantha|karen|moira|tessa|victoria|serena|fiona|zoe|allison|susan|zira|aria|jenny|emma|michelle|nicky|joelle|charlotte)/i,
+                /\b(ava|female|woman|girl)\b/i];
+  var MALE   = [/(daniel|oliver|thomas|aaron|david|evan|nathan|liam|ryan|andrew|brian|davis|jason|tony|william|matthew|christopher|steffan|arthur|gordon|alex)/i,
+                /\b(male|man|boy|tom|adam|eric|guy|mark|roger|fred)\b/i];
+
+  var hits = function (list, name) { return list.some(function (re) { return re.test(name); }); };
+  var maleish   = { test: function (n) { return hits(MALE, n); } };
+  var femaleish = { test: function (n) { return hits(FEMALE, n); } };
 
   function fillVoices() {
     if (!tts) return;
@@ -218,6 +230,11 @@
     if (!all.length) return;
     all.sort(function (a, b) { return quality(b) - quality(a) || a.name.localeCompare(b.name); });
 
+    /* Sounding human beats sounding male. A voice is only a candidate if it
+       is a real voice rather than a novelty one, so the rep never lands on
+       Fred or Zarvox just because the name reads male — but a decent male
+       voice still wins the rep over a better female one. */
+    var GOOD = 25;
     var want = { rep: maleish, felix: femaleish, yuki: femaleish };
     var used = [];
 
@@ -232,8 +249,11 @@
 
       var pick = saved['v-' + role] && all.filter(function (v) { return v.name === saved['v-' + role]; })[0];
       if (!pick) {
-        pick = all.filter(function (v) { return want[role].test(v.name) && used.indexOf(v) < 0; })[0]
-            || all.filter(function (v) { return used.indexOf(v) < 0; })[0]
+        var free = all.filter(function (v) { return used.indexOf(v) < 0; });
+        var pool = free.filter(function (v) { return quality(v) >= GOOD; });
+        pick = pool.filter(function (v) { return want[role].test(v.name); })[0]
+            || pool[0]
+            || free[0]
             || all[0];
       }
       used.push(pick);
@@ -246,8 +266,12 @@
       };
     });
 
-    var best = quality(picks.yuki);
-    if (best < 25) els.note.textContent = 'This device only has basic robotic voices installed. Add a natural voice (Mac: System Settings → Accessibility → Spoken Content → Manage Voices) or paste an ElevenLabs key under Voices.';
+    /* If no male-sounding voice cleared the bar, the rep is a good voice
+       pitched down rather than a bad one — keep him distinguishable. */
+    repShift = maleish.test(picks.rep.name) ? 0.95 : 0.86;
+
+    thin = quality(picks.rep) < 25;
+    elNote();
   }
   if (tts) { fillVoices(); tts.addEventListener('voiceschanged', fillVoices); }
   else { els.note.textContent = 'This browser has no speech synthesis — read along, or paste an ElevenLabs key under Voices.'; }
@@ -266,9 +290,12 @@
     if (saved.elKey) {
       els.note.className = 'note good';
       els.note.textContent = 'ElevenLabs voices are on — the call plays in a studio voice. The key never leaves this browser except to ElevenLabs.';
+    } else if (thin) {
+      els.note.className = 'note bad';
+      els.note.textContent = 'This device only has basic robotic voices installed. Add a natural one (Mac: System Settings → Accessibility → Spoken Content → Manage Voices; Windows: Settings → Time & language → Speech), or paste an ElevenLabs key under Voices.';
     } else {
       els.note.className = 'note';
-      els.note.textContent = "Uses this device's most natural built-in voice. Tap any line to hear just that one. On iOS, press play once to unlock audio.";
+      els.note.textContent = "Uses the most natural voice this device has. Tap any line to hear just that one. On iOS, press play once to unlock audio.";
     }
   }
   elNote();
@@ -276,11 +303,9 @@
   var cache = {};
 
   function elSpeak(i, then) {
-    var role = LINES[i][0], text = LINES[i][1];
-    var voice = saved['el-' + role] || EL_DEFAULT[role];
-    var key = 'v' + voice + '|' + i;
-
+    var mine = seq;
     var play = function (url) {
+      if (mine !== seq) return;             // stopped or restarted while fetching
       audio = new Audio(url);
       audio.playbackRate = parseFloat(els.rate.value);
       audio.onended = then;
@@ -289,9 +314,8 @@
       prefetch(i + 1);
     };
 
-    if (cache[key]) { play(cache[key]); return; }
-
     fetchLine(i).then(play).catch(function (err) {
+      if (mine !== seq) return;
       els.note.className = 'note bad';
       els.note.textContent = 'ElevenLabs failed (' + err.message + ') — falling back to the device voice.';
       deviceSpeak(i, then);
@@ -337,7 +361,7 @@
     var v = picks[LINES[i][0]];
     if (v) { u.voice = v; u.lang = v.lang; }
     u.rate = parseFloat(els.rate.value) * (LINES[i][0] === 'yuki' ? 0.97 : 1);
-    u.pitch = LINES[i][0] === 'rep' ? 0.95 : 1.03;
+    u.pitch = LINES[i][0] === 'rep' ? repShift : 1.03;
 
     var done = false;
     var finishLine = function () { if (!done) { done = true; then(); } };
@@ -349,12 +373,6 @@
     setTimeout(function () { if (!tts.speaking && !tts.paused) finishLine(); }, 1500);
   }
 
-  function say(i, then) {
-    mark(i);
-    if (saved.elKey) elSpeak(i, then);
-    else deviceSpeak(i, then);
-  }
-
   function mark(i) {
     rows.forEach(function (r, j) {
       r.classList.toggle('on', j === i);
@@ -364,56 +382,119 @@
   }
 
   function stopAll() {
+    if (gap) { clearTimeout(gap); gap = null; }
     if (tts) tts.cancel();
     if (audio) { audio.pause(); audio = null; }
+    inFlight = false;
   }
 
-  function next() {
+  /* Every callback carries the run counter it was started under, so a line
+     that was stopped or restarted can never resurrect its old run. */
+  function startLine(i, alone) {
+    var mine = seq;
+    inFlight = true;
+    mark(i);
+
+    var done = function () {
+      if (mine !== seq) return;
+      inFlight = false;
+      if (!playing) return;                    // paused exactly as the line ended
+      if (alone) { finish(); return; }
+      gap = setTimeout(function () {
+        gap = null;
+        if (mine === seq && playing) step();
+      }, 260);
+    };
+
+    if (saved.elKey) elSpeak(i, done); else deviceSpeak(i, done);
+  }
+
+  function step() {
     if (!playing) return;
     if (at >= LINES.length) { finish(); return; }
-    var i = at++;
-    say(i, function () { setTimeout(next, 260); });
+    startLine(at++, false);
   }
 
+  /* Three states: idle, playing, paused. */
+  function setControls(state) {
+    els.play.disabled  = state === 'playing';
+    els.pause.disabled = state !== 'playing';
+    els.stop.disabled  = state === 'idle';
+    els.play.textContent = state === 'paused' ? '▶ Resume' : '▶ Play';
+  }
+  setControls('idle');
+
   function finish() {
+    seq++;
+    stopAll();
     playing = false;
-    els.play.textContent = '▶ Play the call';
-    els.stop.disabled = true;
+    at = 0;
+    setControls('idle');
     mark(-1);
   }
 
   els.play.onclick = function () {
-    if (playing) {                       // pause
-      playing = false;
-      if (audio) audio.pause(); else if (tts) tts.pause();
-      els.play.textContent = '▶ Resume';
-      return;
-    }
-    if (at && (audio || (tts && tts.paused))) {   // resume
+    if (playing) return;
+
+    /* Paused mid-sentence: pick the sentence back up where it stopped. */
+    if (inFlight && (audio || (tts && tts.paused))) {
       playing = true;
-      els.play.textContent = '❚❚ Pause';
+      setControls('playing');
       if (audio) audio.play().catch(function () {}); else tts.resume();
       return;
     }
+
+    /* Paused while a line was still being fetched — replay that line. */
+    if (inFlight) {
+      seq++;
+      stopAll();
+      playing = true;
+      setControls('playing');
+      startLine(Math.max(0, at - 1), false);
+      return;
+    }
+
+    /* Paused in the gap between lines: carry on with the next one. */
+    if (at > 0 && at < LINES.length) {
+      playing = true;
+      setControls('playing');
+      step();
+      return;
+    }
+
+    seq++;                                     // start from the top
     stopAll();
-    at = 0; playing = true;
-    els.play.textContent = '❚❚ Pause';
-    els.stop.disabled = false;
+    at = 0;
+    playing = true;
+    setControls('playing');
     prefetch(0);
-    next();
+    step();
   };
 
-  els.stop.onclick = function () { stopAll(); at = 0; finish(); };
+  els.pause.onclick = function () {
+    if (!playing) return;
+    playing = false;
+    if (gap) { clearTimeout(gap); gap = null; }
+    if (inFlight) { if (audio) audio.pause(); else if (tts) tts.pause(); }
+    setControls('paused');                     // the current line stays lit
+  };
+
+  els.stop.onclick = finish;
   els.cfg.onclick = function () { els.panel.classList.toggle('open'); };
   els.rate.oninput = function () {
     els.rateVal.textContent = (+els.rate.value).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') + '×';
     if (audio) audio.playbackRate = parseFloat(els.rate.value);
   };
 
+  /* Tapping a line plays that line alone — Pause and Stop still apply. */
   rows.forEach(function (r, i) {
     r.onclick = function () {
-      stopAll(); playing = false; finish();
-      say(i, function () { mark(-1); });
+      seq++;
+      stopAll();
+      playing = true;
+      at = i + 1;
+      setControls('playing');
+      startLine(i, true);
     };
   });
 })();

@@ -144,12 +144,20 @@ Nothing about a practice run is written to the CRM, and FELIX says so on every d
 
 ### Hearing it without running the app
 
-`practice-call-audio.html` is the whole demo script as a spoken call sheet — open it
-and press play. It picks the most natural voice this device has for each of the three
-speakers (rep, FELIX, Dr. Watanabe), and tapping any line replays just that one. Paste
-an ElevenLabs key under **Voices** and it plays in a studio voice instead; the key
-stays in that browser's `localStorage`. The lines are generated from
-`assets/script-data.js`, so the page cannot drift from what the app actually says.
+`practice-call-audio.html` is the whole demo script as a spoken call sheet, with
+**Play**, **Pause** and **Stop**: pause holds the sentence and resumes exactly where it
+stopped, and tapping any line plays just that one.
+
+Each of the three speakers (rep, FELIX, Dr. Watanabe) gets a different voice. The page
+ranks the device's installed voices by how natural they actually sound — neural,
+premium and online voices first, the novelty ones last — and gives the rep the best
+*male-sounding* voice that is a real voice; where a device has none, he gets the best
+voice available, pitched down, rather than a robotic one. Paste an ElevenLabs key under
+**Voices** and the whole run plays in studio voices instead; the key stays in that
+browser's `localStorage`.
+
+The lines are generated from `assets/script-data.js`, so the page cannot drift from
+what the app actually says.
 
 The ladders, cues and marking scheme are data — `roleplay` at the bottom of
 `assets/script-data.js`. On the free-form engines the same behaviour comes from the
