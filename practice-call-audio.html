@@ -30,6 +30,8 @@
   }
   button.ghost { background: rgba(255,255,255,.18); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); }
   button[disabled] { opacity: .5; cursor: default; }
+  button.human { background: #1C1C1E; color: #fff; font-weight: 700; }
+  button.human[hidden] { display: none; }
   .rate { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #fff; }
   input[type=range] { width: 110px; accent-color: #fff; }
 
@@ -83,12 +85,18 @@
     <button id="pause" class="ghost" disabled>❚❚ Pause</button>
     <button id="stop" class="ghost" disabled>■ Stop</button>
     <button id="cfg" class="ghost">Voices</button>
+    <button id="human" class="human">Sounds robotic? Use human voices</button>
     <span class="rate"><label for="rate">Speed</label><input id="rate" type="range" min="0.7" max="1.4" step="0.05" value="1" /><span id="rateVal">1×</span></span>
   </div>
 </header>
 
 <div class="panel" id="panel">
-  <h2 class="ph">OpenAI voices <span class="tagline">recommended — the same voices the app's OpenAI engine speaks with</span></h2>
+  <h2 class="ph">Pre-rendered audio <span class="tagline">the best option on stage — real voices, no key, no network</span></h2>
+  <p class="hint" style="margin-top:0">Render the call once on your own machine and this page plays the files instead of synthesising anything:<br />
+  <code>ELEVENLABS_API_KEY=… node render-audio.js</code> &nbsp;or&nbsp; <code>OPENAI_API_KEY=… node render-audio.js --openai</code><br />
+  That writes <code>audio/</code> next to this page. Commit it and everyone who opens the link hears the same human voices. <span id="files-state"></span></p>
+
+  <h2 class="ph">OpenAI voices <span class="tagline">live synthesis — the same voices the app's OpenAI engine speaks with</span></h2>
   <div class="grid">
     <label class="f">Proxy URL — key stays on your server<input id="oa-proxy" type="text" placeholder="/api" autocomplete="off" /></label>
     <label class="f">…or an API key<input id="oa-key" type="password" placeholder="sk-…" autocomplete="off" /></label>
@@ -192,6 +200,10 @@
   var ROLES = ['rep', 'felix', 'yuki'];
   var STORE = 'felix.audio.settings';
 
+  /* Where committed clips live when the page is opened through a viewer that
+     rewrites relative URLs (htmlpreview and friends). */
+  var RAW_BASE = 'https://raw.githubusercontent.com/JS5016/FELIX/claude/pharma-sales-roleplay-47cbcb/audio/';
+
   var tts = window.speechSynthesis;
   var els = {
     play: document.getElementById('play'), pause: document.getElementById('pause'),
@@ -199,7 +211,8 @@
     panel: document.getElementById('panel'),
     rate: document.getElementById('rate'), rateVal: document.getElementById('rateVal'),
     note: document.getElementById('note'), key: document.getElementById('el-key'),
-    oaProxy: document.getElementById('oa-proxy'), oaKey: document.getElementById('oa-key')
+    oaProxy: document.getElementById('oa-proxy'), oaKey: document.getElementById('oa-key'),
+    human: document.getElementById('human')
   };
   var rows = [].slice.call(document.querySelectorAll('.line'));
   var picks = {}, saved = {}, playing = false, at = 0, audio = null;
@@ -207,6 +220,20 @@
 
   try { saved = JSON.parse(localStorage.getItem(STORE) || '{}'); } catch (e) { saved = {}; }
   var store = function () { try { localStorage.setItem(STORE, JSON.stringify(saved)); } catch (e) {} };
+
+  /* If the FELIX app itself is already set up in this browser, use its
+     credentials rather than asking for them twice. Same origin only, so
+     this fires when the page is served next to index.html. */
+  (function inherit() {
+    var app = null;
+    try { app = JSON.parse(localStorage.getItem('felix.voice.config') || 'null'); } catch (e) {}
+    if (!app) return;
+    if (!saved.elKey && app.apiKey) saved.elKey = app.apiKey;
+    if (!saved.oaKey && app.openaiKey) saved.oaKey = app.openaiKey;
+    if (!saved.oaProxy && app.proxyUrl) saved.oaProxy = app.proxyUrl;
+    if (app.voiceId && !saved['el-yuki']) saved['el-yuki'] = app.voiceId;
+    store();
+  })();
 
   /* ── Device voices, best first ───────────────────────────────────
      Name families that are actually neural, and localService === false
@@ -312,7 +339,37 @@
     });
   });
 
+  /* Committed clips beat live synthesis: no key, no latency, no cost, and
+     the same voices for everyone who opens the link. */
+  var rendered = null;
+
+  function findRendered() {
+    var tryBase = function (base) {
+      return fetch(base + 'manifest.json', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (m) {
+          if (!m || !m.files || m.files.length !== LINES.length) return null;
+          m.base = base;
+          return m;
+        })
+        .catch(function () { return null; });
+    };
+
+    return tryBase('audio/').then(function (m) { return m || tryBase(RAW_BASE); }).then(function (m) {
+      rendered = m;
+      var state = document.getElementById('files-state');
+      if (m) {
+        state.innerHTML = '<strong>Found ' + m.files.length + ' rendered clips</strong> ('
+          + m.engine + ', ' + new Date(m.rendered).toLocaleDateString() + ') — playing those.';
+      } else {
+        state.textContent = 'No rendered audio found yet.';
+      }
+      engineNote();
+    });
+  }
+
   function engine() {
+    if (rendered) return 'files';
     if (saved.oaProxy || saved.oaKey) return 'openai';
     if (saved.elKey) return 'elevenlabs';
     return 'device';
@@ -320,7 +377,12 @@
 
   function engineNote() {
     var e = engine();
-    if (e === 'openai') {
+    els.human.hidden = e !== 'device';
+
+    if (e === 'files') {
+      els.note.className = 'note good';
+      els.note.textContent = 'Playing pre-rendered ' + rendered.engine + ' audio — real voices, no key needed.';
+    } else if (e === 'openai') {
       els.note.className = 'note good';
       els.note.textContent = saved.oaProxy
         ? 'OpenAI voices are on through your proxy — the key stays on the server and never reaches this page.'
@@ -328,17 +390,31 @@
     } else if (e === 'elevenlabs') {
       els.note.className = 'note good';
       els.note.textContent = 'ElevenLabs voices are on — the call plays in a studio voice. The key never leaves this browser except to ElevenLabs.';
-    } else if (thin) {
-      els.note.className = 'note bad';
-      els.note.textContent = 'This device only has basic synthetic voices installed, which is why the rep sounds robotic. Set up OpenAI voices under Voices, or install a natural voice (Mac: System Settings → Accessibility → Spoken Content → Manage Voices; Windows: Settings → Time & language → Speech).';
     } else {
-      els.note.className = 'note';
-      els.note.textContent = "Using this device's own voices. For a properly human read, add OpenAI voices under Voices. Tap any line to hear just that one; on iOS, press play once to unlock audio.";
+      els.note.className = 'note bad';
+      els.note.textContent = thin
+        ? 'This is your device’s built-in speech, and this machine only has basic synthetic voices — that is the robotic sound. Real voices need one of the three options under Voices.'
+        : 'This is your device’s built-in speech. It will sound synthetic however good the voice is — for a human read, use pre-rendered audio or an OpenAI or ElevenLabs key under Voices.';
     }
   }
   engineNote();
+  findRendered();
 
   var cache = {}, pending = {};
+
+  /* Pre-rendered clip: just play the file. */
+  function fileSpeak(i, then) {
+    audio = new Audio(rendered.base + rendered.files[i].file);
+    audio.playbackRate = parseFloat(els.rate.value);
+    audio.onended = then;
+    audio.onerror = function () {
+      els.note.className = 'note bad';
+      els.note.textContent = 'Could not play the rendered clip — falling back to this device’s voice.';
+      rendered = null;
+      deviceSpeak(i, then);
+    };
+    audio.play().catch(function () { then(); });
+  }
 
   function studioSpeak(i, then) {
     var mine = seq;
@@ -480,7 +556,10 @@
       }, 260);
     };
 
-    if (engine() === 'device') deviceSpeak(i, done); else studioSpeak(i, done);
+    var e = engine();
+    if (e === 'files') fileSpeak(i, done);
+    else if (e === 'device') deviceSpeak(i, done);
+    else studioSpeak(i, done);
   }
 
   function step() {
@@ -555,6 +634,12 @@
 
   els.stop.onclick = finish;
   els.cfg.onclick = function () { els.panel.classList.toggle('open'); };
+
+  els.human.onclick = function () {
+    els.panel.classList.add('open');
+    els.panel.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    els.oaKey.focus();
+  };
   els.rate.oninput = function () {
     els.rateVal.textContent = (+els.rate.value).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') + '×';
     if (audio) audio.playbackRate = parseFloat(els.rate.value);
