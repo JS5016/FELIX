@@ -46,8 +46,11 @@
     muted: false,
     dictating: false,
     agentMode: false,
-    realtimeMode: false
+    realtimeMode: false,
+    rp: null              // live practice roleplay, see the roleplay section
   };
+
+  const PLACEHOLDER = el.input.placeholder;
 
   /* ── Clock ──────────────────────────────────────────────────────── */
 
@@ -167,6 +170,24 @@
             <pre class="note-body">${esc(b.body)}</pre>
           </article>`;
 
+      case 'score':
+        return `
+          <article class="card">
+            ${b.title ? `<h4 class="card-title">${esc(b.title)}</h4>` : ''}
+            <p class="score-head">
+              <span class="score-num">${esc(b.score)}</span>
+              ${b.verdict ? `<span class="score-verdict">${esc(b.verdict)}</span>` : ''}
+            </p>
+            <ul class="score-list">${b.rows.map(r => `
+              <li class="score-row is-${esc(r.state)}">
+                <span class="score-mark">${r.state === 'hit' ? '✓' : '✕'}</span>
+                <span class="score-body">
+                  <span class="score-label">${esc(r.label)}</span>
+                  <span class="score-note">${esc(r.note)}</span>
+                </span>
+              </li>`).join('')}</ul>
+          </article>`;
+
       case 'callout':
         return `<div class="callout callout-${esc(b.tone || 'info')}">${esc(b.text)}</div>`;
 
@@ -175,11 +196,17 @@
     }
   }
 
-  function addMessage(role, text, blocks) {
+  /* `speaker` relabels a FELIX turn — used when he is in character as an HCP
+     during a practice roleplay, or stepping out of one to coach. */
+  function addMessage(role, text, blocks, speaker) {
+    const who = speaker
+      ? `${esc(speaker.name)}<span class="who-tag">${esc(speaker.tag)}</span>`
+      : 'FELIX';
+
     const wrap = document.createElement('div');
-    wrap.className = 'msg msg-' + role;
+    wrap.className = 'msg msg-' + role + (speaker ? ' msg-' + speaker.kind : '');
     wrap.innerHTML = role === 'felix'
-      ? `<div class="msg-who">FELIX</div><div class="bubble"></div><div class="blocks"></div>`
+      ? `<div class="msg-who">${who}</div><div class="bubble"></div><div class="blocks"></div>`
       : `<div class="bubble"></div>`;
     el.thread.appendChild(wrap);
 
@@ -239,7 +266,8 @@
     barrier_lookup: 'Barrier lookup',
     next_best_action: 'Next-best-action',
     territory_insights: 'Territory insights',
-    crm_notes: 'CRM notes'
+    crm_notes: 'CRM notes',
+    roleplay_partner: 'Practice partner'
   };
 
   const toolLabel = n => TOOL_LABELS[n] || n;
@@ -303,16 +331,192 @@
     return bestScore >= 3 ? best : null;
   }
 
+  /* ── Practice roleplay ──────────────────────────────────────────────
+   * FELIX plays the doctor so the rep can rehearse the call he is about to
+   * walk into. While a run is live the keyword matcher is bypassed: each
+   * turn walks the persona's objection ladder in assets/script-data.js, is
+   * marked against the rubric, and the run ends on a scorecard.
+   *
+   * A reply object may carry `speaker` (who is talking) and `follow` (a
+   * second turn delivered straight after — the doctor's opening line, or
+   * the debrief that lands once she has said goodbye).
+   * ------------------------------------------------------------------ */
+
+  const RP = SCRIPT.roleplay || { personas: {}, rubric: [], compliance: [], verdicts: [] };
+  const COUNT = ['zero', 'one', 'two', 'three', 'four', 'five', 'six'];
+
+  const rpHas = (text, list) => (list || []).some(p => text.includes(normalize(p).trim()));
+
+  const rpSpeaker = p => ({ name: p.name, tag: 'in character', kind: 'rp' });
+  const COACH = { name: 'FELIX', tag: 'stepping out', kind: 'aside' };
+
+  /* "you play Dr. Yuki" picks her; anything else falls to the default. */
+  function rpPick(raw) {
+    const t = normalize(raw);
+    const all = Object.values(RP.personas || {});
+    return all.find(p => rpHas(t, p.match)) || RP.personas[RP.defaultPersona] || all[0] || null;
+  }
+
+  function rpStart(raw) {
+    const p = rpPick(raw);
+    if (!p) return null;
+    state.rp = { p: p, beat: 0, presses: 0, hits: {}, flags: [] };
+    document.body.classList.add('is-roleplay');
+    el.input.placeholder = 'You’re the rep — ' + p.short + ' is listening…';
+    return {
+      text: p.setup.text, speech: p.setup.speech, blocks: p.setupBlocks,
+      follow: { speaker: rpSpeaker(p), text: p.opening.text, speech: p.opening.speech }
+    };
+  }
+
+  function rpStop() {
+    state.rp = null;
+    document.body.classList.remove('is-roleplay');
+    el.input.placeholder = PLACEHOLDER;
+  }
+
+  /* Marked across the whole run: a dimension covered on any turn counts. */
+  function rpMark(raw, t) {
+    const rp = state.rp, cues = rp.p.cues || {};
+    (RP.rubric || []).forEach(dim => {
+      if (rp.hits[dim.id]) return;
+      if (dim.id === 'discovery' && (rpHas(t, RP.openQuestion) || raw.indexOf('?') >= 0)) {
+        rp.hits[dim.id] = true;
+        return;
+      }
+      if (rpHas(t, cues[dim.id])) rp.hits[dim.id] = true;
+    });
+    (RP.compliance || []).forEach(c => {
+      if (rpHas(t, c.any) && rp.flags.indexOf(c.flag) < 0) rp.flags.push(c.flag);
+    });
+  }
+
+  function rpDebrief() {
+    const rp = state.rp, p = rp.p;
+
+    const rows = (RP.rubric || []).map(dim => {
+      const hit = !!rp.hits[dim.id];
+      const over = (p.coach || {})[dim.id] || {};
+      return {
+        label: dim.label,
+        state: hit ? 'hit' : 'miss',
+        note: hit ? (over.hit || dim.hit) : (over.miss || dim.miss)
+      };
+    });
+
+    const score = rows.filter(r => r.state === 'hit').length;
+    const misses = rows.filter(r => r.state === 'miss');
+    const verdict = ((RP.verdicts || []).find(v => score >= v.min) || {}).text || '';
+
+    const blocks = [{
+      type: 'score',
+      title: 'Practice scorecard · ' + p.name,
+      score: score + ' of ' + rows.length,
+      verdict: verdict,
+      rows: rows
+    }];
+    blocks.push(misses.length
+      ? { type: 'panel', title: 'Do this differently', items: misses.map(m => m.note) }
+      : { type: 'panel', title: 'What worked', items: p.debrief.strong });
+    if (rp.flags.length) blocks.push({ type: 'callout', tone: 'warn', text: 'Compliance: ' + rp.flags.join(' ') });
+    blocks.push({ type: 'callout', tone: 'info', text: p.debrief.real });
+    blocks.push({ type: 'callout', tone: 'good', text: RP.disclaimer });
+
+    const headline = 'Out of character. You landed **' + score + ' of ' + rows.length + '** — ' + verdict;
+    const spoken = 'Out of character. You landed ' + (COUNT[score] || score) + ' of '
+      + (COUNT[rows.length] || rows.length) + '. ' + verdict + ' '
+      + (misses.length ? misses[0].note : (p.debrief.strong[0] || '')) + ' ' + p.debrief.real;
+
+    rpStop();
+    state.lastNodeId = 'roleplay_debrief';
+    state.fallbackIndex = 0;
+
+    return { text: headline, speech: spoken, blocks: blocks, chips: p.debrief.chips };
+  }
+
+  /* "Felix, what did she ask for last time?" — one turn out of the scene,
+     answered from the script, without losing the run. */
+  const rpStripAside = s => String(s)
+    .replace(/\b(hey|ok|okay|hold on|hang on|wait|pause)\b/ig, ' ')
+    .replace(/\bfelix\b/ig, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  function rpTurn(raw) {
+    const rp = state.rp, p = rp.p, t = normalize(raw);
+
+    if (rpHas(t, RP.exit)) return rpDebrief();
+
+    if (rpHas(t, RP.aside)) {
+      const node = match(rpStripAside(raw));
+      /* A run is already live, so "start a roleplay" is not an answer. */
+      const body = (node && !node.roleplay) ? node : RP.asideFallback;
+      return {
+        speaker: COACH,
+        text: body.text,
+        speech: body.speech || String(body.text).replace(/\*\*/g, ''),
+        blocks: body.blocks
+      };
+    }
+
+    rpMark(raw, t);
+
+    const beat = p.beats[rp.beat];
+    if (!beat) return rpDebrief();
+
+    /* Miss the cue and she presses — but never more than maxPress times, so
+       a live demo always keeps moving. */
+    if (!rpHas(t, beat.cue) && rp.presses < (RP.maxPress || 2)) {
+      const press = beat.press[Math.min(rp.presses, beat.press.length - 1)];
+      rp.presses++;
+      return { speaker: rpSpeaker(p), text: press.text, speech: press.speech };
+    }
+
+    rp.beat++;
+    rp.presses = 0;
+
+    const out = { speaker: rpSpeaker(p), text: beat.line.text, speech: beat.line.speech };
+    if (beat.end) out.follow = rpDebrief();
+    return out;
+  }
+
   function reply(raw) {
+    if (state.rp) return rpTurn(raw);
+
     const node = match(raw);
     if (node) {
       state.lastNodeId = node.id;
       state.fallbackIndex = 0;
+      if (node.roleplay) {
+        const run = rpStart(raw);
+        if (run) return run;
+      }
       return node;
     }
     const f = SCRIPT.fallbacks[state.fallbackIndex % SCRIPT.fallbacks.length];
     state.fallbackIndex++;
     return f;
+  }
+
+  const spokenOf = r => r.speech || String(r.text || '').replace(/\*\*/g, '');
+
+  /* Speaks each line in turn; `done` fires once the last one finishes. */
+  function speakSeq(lines, done) {
+    const queue = lines.filter(Boolean);
+    (function next() {
+      if (!queue.length) { if (done) done(); return; }
+      speak(queue.shift(), next);
+    })();
+  }
+
+  function deliverChat(r) {
+    const lines = [];
+    [r, r.follow].forEach(part => {
+      if (!part || !part.text) return;
+      addMessage('felix', part.text, part.blocks, part.speaker);
+      lines.push(spokenOf(part));
+    });
+    speakSeq(lines);
   }
 
   /* ── Chat mode ──────────────────────────────────────────────────── */
@@ -347,9 +551,7 @@
       }).catch(err => {
         ghost.remove();
         showBanner('OpenAI request failed: ' + err.message + ' — answering from the script instead.');
-        const r = reply(clean);
-        addMessage('felix', r.text, r.blocks);
-        speak(r.speech || r.text.replace(/\*\*/g, ''));
+        deliverChat(reply(clean));
         state.busy = false;
       });
       return;
@@ -357,9 +559,7 @@
 
     setTimeout(() => {
       ghost.remove();
-      const r = reply(clean);
-      addMessage('felix', r.text, r.blocks);
-      speak(r.speech || r.text.replace(/\*\*/g, ''));
+      deliverChat(reply(clean));
       state.busy = false;
     }, 480 + Math.random() * 280);
   }
@@ -370,6 +570,7 @@
     if (state.mode === 'call') endCall();
     cancelSpeech();
     stopDictation();
+    rpStop();
     state.lastNodeId = null;
     state.fallbackIndex = 0;
     state.busy = false;
@@ -400,7 +601,7 @@
         if (state.mode === 'call') {
           el.call.classList.remove('is-listening');
           el.call.classList.add('is-speaking');
-          setCallState('Agent is speaking…', 'Speak naturally');
+          setCallState('Agent is speaking…', callSub());
         }
       },
       onDone: () => {
@@ -492,10 +693,13 @@
     if (sub !== undefined) el.callSub.textContent = sub;
   }
 
-  function liveTurn(role, text, interim) {
+  /* `label` renames the AGENT row — the doctor's name during a practice run. */
+  function liveTurn(role, text, interim, label) {
     const div = document.createElement('div');
-    div.className = 'live-turn ' + (role === 'you' ? 'you' : 'agent') + (interim ? ' interim' : '');
-    div.innerHTML = `<div class="live-role">${role === 'you' ? 'YOU' : 'AGENT'}</div><div class="live-text"></div>`;
+    div.className = 'live-turn ' + (role === 'you' ? 'you' : 'agent')
+      + (interim ? ' interim' : '') + (label ? ' rp' : '');
+    div.innerHTML = `<div class="live-role"></div><div class="live-text"></div>`;
+    div.querySelector('.live-role').textContent = role === 'you' ? 'YOU' : (label || 'AGENT');
     div.querySelector('.live-text').textContent = text;
     el.liveBox.appendChild(div);
     el.liveBox.scrollTop = el.liveBox.scrollHeight;
@@ -584,11 +788,31 @@
     });
   }
 
+  /* The sub-line doubles as the reminder that a practice run is live. */
+  const callSub = () => state.rp
+    ? 'Practice · ' + state.rp.p.short + ' — say “gotta go” to stop'
+    : 'Speak naturally';
+
   function agentSays(speech) {
+    agentSaysAll([speech]);
+  }
+
+  function agentSaysAll(lines) {
     el.call.classList.remove('is-listening');   // speaking wins over listening
     el.call.classList.add('is-speaking');
-    setCallState('Agent is speaking…', 'Speak naturally');
-    speak(speech, () => { if (state.mode === 'call') listenInCall(); });
+    setCallState('Agent is speaking…', callSub());
+    speakSeq(lines, () => { if (state.mode === 'call') listenInCall(); });
+  }
+
+  /* One scripted reply, possibly two turns (the doctor, then the debrief). */
+  function deliverCall(r) {
+    const lines = [];
+    [r, r.follow].forEach(part => {
+      if (!part || !part.text) return;
+      liveTurn('agent', part.text.replace(/\*\*/g, ''), false, part.speaker && part.speaker.name);
+      lines.push(spokenOf(part));
+    });
+    agentSaysAll(lines);
   }
 
   function listenInCall() {
@@ -600,7 +824,7 @@
 
     el.call.classList.remove('is-speaking');
     el.call.classList.add('is-listening');
-    setCallState('Listening…', 'Speak naturally');
+    setCallState('Listening…', callSub());
     interimNode = null;
 
     recog = newRecognizer(
@@ -613,9 +837,7 @@
 
         setTimeout(() => {
           if (state.mode !== 'call') return;
-          const r = reply(said);
-          liveTurn('agent', r.text.replace(/\*\*/g, ''));
-          agentSays(r.speech || r.text.replace(/\*\*/g, ''));
+          deliverCall(reply(said));
         }, 420);
       },
       partial => {

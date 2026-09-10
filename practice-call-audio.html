@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ask FELIX — the practice call, out loud</title>
+<style>
+  :root {
+    --o: #EC6B24; --o-deep: #DC4515; --ink: #1C1C1E; --ink-2: #5C6470; --ink-3: #8A929E;
+    --page: #FDFAF7; --card: #fff; --cream: #FBF5EA; --cream-ln: #EFE6D5; --line: #E7E2DC;
+    --lo: #4B7BC4; --lo-bg: #EAF1FB; --green: #17864A;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font: 400 16px/1.6 -apple-system, system-ui, "Segoe UI", sans-serif;
+  }
+  header {
+    position: sticky; top: 0; z-index: 5;
+    background: linear-gradient(135deg, var(--o), var(--o-deep)); color: #fff;
+    padding: 18px 22px 16px;
+  }
+  h1 { margin: 0; font-size: 19px; letter-spacing: -.01em; }
+  header p { margin: 4px 0 0; font-size: 13.5px; opacity: .92; }
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; }
+  button {
+    border: 0; border-radius: 999px; cursor: pointer;
+    padding: 10px 20px; font: 600 15px -apple-system, system-ui, sans-serif;
+    background: #fff; color: var(--o-deep);
+  }
+  button.ghost { background: rgba(255,255,255,.18); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); }
+  button[disabled] { opacity: .5; cursor: default; }
+  button.human { background: #1C1C1E; color: #fff; font-weight: 700; }
+  button.human[hidden] { display: none; }
+  .rate { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #fff; }
+  input[type=range] { width: 110px; accent-color: #fff; }
+
+  .panel { display: none; padding: 15px 22px; background: var(--cream); border-bottom: 1px solid var(--cream-ln); }
+  .panel.open { display: block; }
+  .grid { display: flex; gap: 12px; flex-wrap: wrap; }
+  label.f { font-size: 12.5px; color: var(--ink-2); display: flex; flex-direction: column; gap: 4px; }
+  select, input[type=password] { padding: 7px 10px; border-radius: 9px; border: 1px solid var(--line); background: #fff; font-size: 13.5px; max-width: 260px; }
+  input[type=password] { min-width: 250px; }
+  .hint { margin: 10px 0 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.6; }
+  .hint code { background: #fff; border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; }
+  .ph { margin: 0 0 10px; font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+  .ph + .grid { margin-bottom: 4px; }
+  .panel .ph ~ .ph { margin-top: 20px; }
+  .tagline { font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 12.5px; color: var(--ink-2); margin-left: 8px; }
+
+  .note { margin: 0; padding: 12px 22px; background: var(--lo-bg); color: #2C4E82; font-size: 13px; }
+  .note.good { background: #EDFAF2; color: var(--green); }
+  .note.bad { background: #FDECE2; color: var(--o-deep); }
+
+  ol { list-style: none; margin: 0 auto; padding: 18px 22px 90px; max-width: 780px; }
+  .line {
+    display: grid; grid-template-columns: 150px 1fr; gap: 16px;
+    padding: 13px 15px; margin-bottom: 9px; border-radius: 13px;
+    background: var(--card); border: 1px solid var(--line); cursor: pointer;
+    transition: box-shadow .15s, border-color .15s, transform .15s;
+  }
+  .line:hover { border-color: var(--o); }
+  .line.on { border-color: var(--o); box-shadow: 0 0 0 3px #FDECE2; transform: translateX(2px); }
+  .line.done { opacity: .55; }
+  .who { font-size: 11.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); padding-top: 3px; }
+  .say { margin: 0; font-size: 16px; }
+  .rep { background: #FEF4EC; }
+  .rep .who { color: var(--o-deep); }
+  .felix .who { color: var(--ink-2); }
+  .yuki { border-left: 3px solid var(--lo); }
+  .yuki .who { color: var(--lo); }
+  .yuki .say { font-style: italic; }
+
+  footer { position: fixed; left: 0; right: 0; bottom: 0; padding: 9px 22px; background: rgba(253,250,247,.94); border-top: 1px solid var(--line); font-size: 12.5px; color: var(--ink-3); }
+  @media (max-width: 620px) { .line { grid-template-columns: 1fr; gap: 4px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Ask FELIX — the practice call, out loud</h1>
+  <p>The Fierce Pharma script: the recall, the roleplay with Dr. Watanabe, and the scored debrief.</p>
+  <div class="bar">
+    <button id="play">▶ Play</button>
+    <button id="pause" class="ghost" disabled>❚❚ Pause</button>
+    <button id="stop" class="ghost" disabled>■ Stop</button>
+    <button id="cfg" class="ghost">Voices</button>
+    <button id="human" class="human">Sounds robotic? Use human voices</button>
+    <span class="rate"><label for="rate">Speed</label><input id="rate" type="range" min="0.7" max="1.4" step="0.05" value="1" /><span id="rateVal">1×</span></span>
+  </div>
+</header>
+
+<div class="panel" id="panel">
+  <h2 class="ph">Pre-rendered audio <span class="tagline">the best option on stage — real voices, no key, no network</span></h2>
+  <p class="hint" style="margin-top:0">Render the call once on your own machine and this page plays the files instead of synthesising anything:<br />
+  <code>ELEVENLABS_API_KEY=… node render-audio.js</code> &nbsp;or&nbsp; <code>OPENAI_API_KEY=… node render-audio.js --openai</code><br />
+  That writes <code>audio/</code> next to this page. Commit it and everyone who opens the link hears the same human voices. <span id="files-state"></span></p>
+
+  <h2 class="ph">OpenAI voices <span class="tagline">live synthesis — the same voices the app's OpenAI engine speaks with</span></h2>
+  <div class="grid">
+    <label class="f">Proxy URL — key stays on your server<input id="oa-proxy" type="text" placeholder="/api" autocomplete="off" /></label>
+    <label class="f">…or an API key<input id="oa-key" type="password" placeholder="sk-…" autocomplete="off" /></label>
+    <label class="f">John · rep<select id="oa-rep"><option value="ash">Ash — male, warm</option><option value="verse">Verse — male, expressive</option><option value="onyx">Onyx — male, deep</option><option value="echo">Echo — male, even</option><option value="ballad">Ballad — male, British</option><option value="alloy">Alloy — neutral</option><option value="fable">Fable — neutral, British</option><option value="sage">Sage — female, calm</option><option value="coral">Coral — female, bright</option><option value="nova">Nova — female, energetic</option><option value="shimmer">Shimmer — female, soft</option><option value="marin">Marin — realtime voice</option><option value="cedar">Cedar — realtime voice</option></select></label>
+    <label class="f">FELIX<select id="oa-felix"><option value="ash">Ash — male, warm</option><option value="verse">Verse — male, expressive</option><option value="onyx">Onyx — male, deep</option><option value="echo">Echo — male, even</option><option value="ballad">Ballad — male, British</option><option value="alloy">Alloy — neutral</option><option value="fable">Fable — neutral, British</option><option value="sage">Sage — female, calm</option><option value="coral">Coral — female, bright</option><option value="nova">Nova — female, energetic</option><option value="shimmer">Shimmer — female, soft</option><option value="marin">Marin — realtime voice</option><option value="cedar">Cedar — realtime voice</option></select></label>
+    <label class="f">Dr. Yuki<select id="oa-yuki"><option value="ash">Ash — male, warm</option><option value="verse">Verse — male, expressive</option><option value="onyx">Onyx — male, deep</option><option value="echo">Echo — male, even</option><option value="ballad">Ballad — male, British</option><option value="alloy">Alloy — neutral</option><option value="fable">Fable — neutral, British</option><option value="sage">Sage — female, calm</option><option value="coral">Coral — female, bright</option><option value="nova">Nova — female, energetic</option><option value="shimmer">Shimmer — female, soft</option><option value="marin">Marin — realtime voice</option><option value="cedar">Cedar — realtime voice</option></select></label>
+  </div>
+  <p class="hint">Spoken by <code>gpt-4o-mini-tts</code>, each part directed for delivery — the rep is briefed as a rep, Dr. Watanabe as a doctor between patients — which is what stops it sounding read aloud. Run <code>OPENAI_API_KEY=sk-… node server.js</code>, open this page from <code>http://localhost:8000/practice-call-audio.html</code> and set the proxy to <code>/api</code>: the key never reaches the browser. A key pasted here instead is kept in this browser's <code>localStorage</code> — fine on your own laptop, not on a shared one.</p>
+
+  <h2 class="ph">ElevenLabs</h2>
+  <div class="grid">
+    <label class="f">API key<input id="el-key" type="password" placeholder="sk_…" autocomplete="off" /></label>
+    <label class="f">Rep<select id="el-rep"><option value="XB0fDUnXU5powFXDhCwa">Charlotte — conversational</option><option value="EXAVITQu4vr4xnSDxMaL">Sarah — soft</option><option value="JBFqnCBsd6RMkjVDRZzb">George — narrative</option><option value="onwK4e9ZLuTAKqWW03F9">Daniel — authoritative</option></select></label>
+    <label class="f">FELIX<select id="el-felix"><option value="XB0fDUnXU5powFXDhCwa">Charlotte — conversational</option><option value="EXAVITQu4vr4xnSDxMaL">Sarah — soft</option><option value="JBFqnCBsd6RMkjVDRZzb">George — narrative</option><option value="onwK4e9ZLuTAKqWW03F9">Daniel — authoritative</option></select></label>
+    <label class="f">Dr. Yuki<select id="el-yuki"><option value="XB0fDUnXU5powFXDhCwa">Charlotte — conversational</option><option value="EXAVITQu4vr4xnSDxMaL">Sarah — soft</option><option value="JBFqnCBsd6RMkjVDRZzb">George — narrative</option><option value="onwK4e9ZLuTAKqWW03F9">Daniel — authoritative</option></select></label>
+  </div>
+
+  <h2 class="ph">This device <span class="tagline">the fallback when neither of the above is set up</span></h2>
+  <div class="grid">
+    <label class="f">John · rep<select id="v-rep"></select></label>
+    <label class="f">FELIX<select id="v-felix"></select></label>
+    <label class="f">Dr. Yuki Watanabe<select id="v-yuki"></select></label>
+  </div>
+  <p class="hint">Ranked by how natural each installed voice actually is. Built-in voices vary wildly between machines — if the rep still sounds synthetic here, that is the device, and OpenAI above is the fix.</p>
+</div>
+
+<p class="note" id="note">Uses this device's most natural built-in voice. Tap any line to hear just that one. On iOS, press play once to unlock audio.</p>
+
+<ol id="lines">
+    <li class="line rep" data-i="0">
+      <span class="who">John · rep</span>
+      <p class="say">Hey FELIX — I’m here at Fierce Pharma with a large pharma audience, and everyone wants to see what you can do.</p>
+    </li>
+    <li class="line felix" data-i="1">
+      <span class="who">FELIX</span>
+      <p class="say">Hi John, FELIX here. You're at University Rehabilitation Center in Fort Worth. What do you need?</p>
+    </li>
+    <li class="line rep" data-i="2">
+      <span class="who">John · rep</span>
+      <p class="say">Thank you, FELIX. I am actually a bit rushed, I’m about to meet Dr. Yuki Watanabe. Remind me — what was my last interaction with her?</p>
+    </li>
+    <li class="line felix" data-i="3">
+      <span class="who">FELIX</span>
+      <p class="say">September first, in person. Pacrivex, early tolerability, and you walked her staff through the starter and titration pack. She asked for real world discontinuation rates in the first eight weeks, and that is still open — the approved summary cleared M L R on August twenty sixth and has not gone out. That is the thread to pick up.</p>
+    </li>
+    <li class="line rep" data-i="4">
+      <span class="who">John · rep</span>
+      <p class="say">Before I meet Dr. Yuki, let’s practice. You play Dr. Yuki, and I’ll play myself. Let’s go.</p>
+    </li>
+    <li class="line felix" data-i="5">
+      <span class="who">FELIX</span>
+      <p class="say">Practice mode. I'm Doctor Watanabe from here, working from the objections she has actually raised with you. Say gotta go whenever you want, and I'll break character and score the run. She's walking in now.</p>
+    </li>
+    <li class="line yuki" data-i="6">
+      <span class="who">Dr. Yuki Watanabe</span>
+      <p class="say">Hi, this is Doctor Watanabe. I only have a minute. What did you want to cover on Pacrivex today?</p>
+    </li>
+    <li class="line rep" data-i="7">
+      <span class="who">John · rep</span>
+      <p class="say">Dr. Yuki, thanks for the time. Last time we discussed the titration challenges and reviewed the starter pack. Have you had a chance to use it with a new patient?</p>
+    </li>
+    <li class="line yuki" data-i="8">
+      <span class="who">Dr. Yuki Watanabe</span>
+      <p class="say">We tried it once. The pack was fine, but my nurse still had questions, and the patient called back confused. I don't have time for extra steps.</p>
+    </li>
+    <li class="line rep" data-i="9">
+      <span class="who">John · rep</span>
+      <p class="say">That’s helpful. It sounds like the bigger issue now is workflow rather than titration itself. We have a simple one-page patient guide your nurse can hand directly to the patient. Would that help?</p>
+    </li>
+    <li class="line yuki" data-i="10">
+      <span class="who">Dr. Yuki Watanabe</span>
+      <p class="say">Possibly. But I've also had a couple of patients run into coverage delays, and that makes me hesitant to start something new.</p>
+    </li>
+    <li class="line rep" data-i="11">
+      <span class="who">John · rep</span>
+      <p class="say">Understood. I’ll leave the one-page guide today and connect your team with the available access support. I’ll follow up after your next appropriate patient start to see if those two things made the process easier.</p>
+    </li>
+    <li class="line yuki" data-i="12">
+      <span class="who">Dr. Yuki Watanabe</span>
+      <p class="say">Alright. If your access team handles the paperwork, and that guide keeps my nurse out of it, I'd consider it on the next appropriate patient.</p>
+    </li>
+    <li class="line rep" data-i="13">
+      <span class="who">John · rep</span>
+      <p class="say">Alright Felix, gotta go!</p>
+    </li>
+    <li class="line felix" data-i="14">
+      <span class="who">FELIX</span>
+      <p class="say">Out of character. You landed five of five. That's the call. Nothing I would change. You picked up the September 1 thread, followed the objection when it moved, and closed on her next appropriate patient. For the real call: the real-world discontinuation summary she asked for on September 1 is MLR approved and still unsent. Take it in with you.</p>
+    </li></ol>
+
+<footer>Fictional demo data — HCPs, Pacrivex, Momelyx and every figure are invented. Generated from <code>assets/script-data.js</code>.</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var LINES = [["rep","Hey FELIX — I’m here at Fierce Pharma with a large pharma audience, and everyone wants to see what you can do."],["felix","Hi John, FELIX here. You're at University Rehabilitation Center in Fort Worth. What do you need?"],["rep","Thank you, FELIX. I am actually a bit rushed, I’m about to meet Dr. Yuki Watanabe. Remind me — what was my last interaction with her?"],["felix","September first, in person. Pacrivex, early tolerability, and you walked her staff through the starter and titration pack. She asked for real world discontinuation rates in the first eight weeks, and that is still open — the approved summary cleared M L R on August twenty sixth and has not gone out. That is the thread to pick up."],["rep","Before I meet Dr. Yuki, let’s practice. You play Dr. Yuki, and I’ll play myself. Let’s go."],["felix","Practice mode. I'm Doctor Watanabe from here, working from the objections she has actually raised with you. Say gotta go whenever you want, and I'll break character and score the run. She's walking in now."],["yuki","Hi, this is Doctor Watanabe. I only have a minute. What did you want to cover on Pacrivex today?"],["rep","Dr. Yuki, thanks for the time. Last time we discussed the titration challenges and reviewed the starter pack. Have you had a chance to use it with a new patient?"],["yuki","We tried it once. The pack was fine, but my nurse still had questions, and the patient called back confused. I don't have time for extra steps."],["rep","That’s helpful. It sounds like the bigger issue now is workflow rather than titration itself. We have a simple one-page patient guide your nurse can hand directly to the patient. Would that help?"],["yuki","Possibly. But I've also had a couple of patients run into coverage delays, and that makes me hesitant to start something new."],["rep","Understood. I’ll leave the one-page guide today and connect your team with the available access support. I’ll follow up after your next appropriate patient start to see if those two things made the process easier."],["yuki","Alright. If your access team handles the paperwork, and that guide keeps my nurse out of it, I'd consider it on the next appropriate patient."],["rep","Alright Felix, gotta go!"],["felix","Out of character. You landed five of five. That's the call. Nothing I would change. You picked up the September 1 thread, followed the objection when it moved, and closed on her next appropriate patient. For the real call: the real-world discontinuation summary she asked for on September 1 is MLR approved and still unsent. Take it in with you."]];
+  var EL_DEFAULT = {"rep":"onwK4e9ZLuTAKqWW03F9","felix":"EXAVITQu4vr4xnSDxMaL","yuki":"XB0fDUnXU5powFXDhCwa"};
+  var OA_DEFAULT = {"rep":"ash","felix":"sage","yuki":"coral"};
+  var OA_STYLE = {"rep":"A pharmaceutical sales rep in his mid-thirties, standing in a clinic corridor. Warm, quick and professional, slightly rushed but never breathless. Natural conversational rhythm, not an announcer.","felix":"A calm, efficient voice assistant briefing a colleague on a phone call. Brisk and precise, never chirpy. Read numbers and dates plainly.","yuki":"A hematologist between patients. Clipped, mildly skeptical, courteous but unsentimental. Short sentences, a little impatient."};
+  var ROLES = ['rep', 'felix', 'yuki'];
+  var STORE = 'felix.audio.settings';
+
+  /* Where committed clips live when the page is opened through a viewer that
+     rewrites relative URLs (htmlpreview and friends). */
+  var RAW_BASE = 'https://raw.githubusercontent.com/JS5016/FELIX/claude/pharma-sales-roleplay-47cbcb/audio/';
+
+  var tts = window.speechSynthesis;
+  var els = {
+    play: document.getElementById('play'), pause: document.getElementById('pause'),
+    stop: document.getElementById('stop'), cfg: document.getElementById('cfg'),
+    panel: document.getElementById('panel'),
+    rate: document.getElementById('rate'), rateVal: document.getElementById('rateVal'),
+    note: document.getElementById('note'), key: document.getElementById('el-key'),
+    oaProxy: document.getElementById('oa-proxy'), oaKey: document.getElementById('oa-key'),
+    human: document.getElementById('human')
+  };
+  var rows = [].slice.call(document.querySelectorAll('.line'));
+  var picks = {}, saved = {}, playing = false, at = 0, audio = null;
+  var repShift = 0.95, thin = false, seq = 0, gap = null, inFlight = false;
+
+  try { saved = JSON.parse(localStorage.getItem(STORE) || '{}'); } catch (e) { saved = {}; }
+  var store = function () { try { localStorage.setItem(STORE, JSON.stringify(saved)); } catch (e) {} };
+
+  /* If the FELIX app itself is already set up in this browser, use its
+     credentials rather than asking for them twice. Same origin only, so
+     this fires when the page is served next to index.html. */
+  (function inherit() {
+    var app = null;
+    try { app = JSON.parse(localStorage.getItem('felix.voice.config') || 'null'); } catch (e) {}
+    if (!app) return;
+    if (!saved.elKey && app.apiKey) saved.elKey = app.apiKey;
+    if (!saved.oaKey && app.openaiKey) saved.oaKey = app.openaiKey;
+    if (!saved.oaProxy && app.proxyUrl) saved.oaProxy = app.proxyUrl;
+    if (app.voiceId && !saved['el-yuki']) saved['el-yuki'] = app.voiceId;
+    store();
+  })();
+
+  /* ── Device voices, best first ───────────────────────────────────
+     Name families that are actually neural, and localService === false
+     (Edge/Chrome online voices), score above the old formant voices. */
+  var TIERS = [
+    { re: /(siri|premium|enhanced|neural|natural)/i, s: 60 },
+    { re: /(ava|zoe|evan|nathan|joelle|noelle|serena|matilda|isha|nicky|aaron|tom|liam|adam)/i, s: 45 },
+    { re: /(aria|jenny|emma|michelle|guy|christopher|eric|roger|steffan|andrew|brian|davis|jason|tony|william|matthew)/i, s: 40 },
+    { re: /(google (us|uk) english)/i, s: 35 },
+    { re: /(samantha|karen|moira|tessa|daniel|alex|oliver|fiona|rishi|ryan|arthur|gordon)/i, s: 25 },
+    { re: /(zira|david|mark|hazel|susan|catherine|james)/i, s: 12 },
+    { re: /(espeak|festival|pico|compact|eloquence|albert|bad news|bahh|bells|boing|bubbles|cellos|jester|organ|superstar|trinoids|whisper|wobble|zarvox|junior|ralph|kathy|fred|grandma|grandpa|rocko|shelley|sandy|eddy|reed|flo|novelty)/i, s: -60 }
+  ];
+
+  function quality(v) {
+    var s = 0;
+    TIERS.forEach(function (t) { if (t.re.test(v.name)) s += t.s; });
+    if (v.localService === false) s += 20;          // network neural voice
+    if (/^en[-_]US/i.test(v.lang)) s += 6;
+    else if (/^en[-_]GB/i.test(v.lang)) s += 3;
+    return s;
+  }
+
+  /* Short tokens are word-anchored on purpose: "man" is inside Samantha and
+     "ava" is inside other names, and a mis-read name is what puts the rep in
+     a woman's voice. */
+  var FEMALE = [/(samantha|karen|moira|tessa|victoria|serena|fiona|zoe|allison|susan|zira|aria|jenny|emma|michelle|nicky|joelle|charlotte)/i,
+                /\b(ava|female|woman|girl)\b/i];
+  var MALE   = [/(daniel|oliver|thomas|aaron|david|evan|nathan|liam|ryan|andrew|brian|davis|jason|tony|william|matthew|christopher|steffan|arthur|gordon|alex)/i,
+                /\b(male|man|boy|tom|adam|eric|guy|mark|roger|fred)\b/i];
+
+  var hits = function (list, name) { return list.some(function (re) { return re.test(name); }); };
+  var maleish   = { test: function (n) { return hits(MALE, n); } };
+  var femaleish = { test: function (n) { return hits(FEMALE, n); } };
+
+  function fillVoices() {
+    if (!tts) return;
+    var all = (tts.getVoices() || []).filter(function (v) { return /^en/i.test(v.lang); });
+    if (!all.length) return;
+    all.sort(function (a, b) { return quality(b) - quality(a) || a.name.localeCompare(b.name); });
+
+    /* Sounding human beats sounding male. A voice is only a candidate if it
+       is a real voice rather than a novelty one, so the rep never lands on
+       Fred or Zarvox just because the name reads male — but a decent male
+       voice still wins the rep over a better female one. */
+    var GOOD = 25;
+    var want = { rep: maleish, felix: femaleish, yuki: femaleish };
+    var used = [];
+
+    ROLES.forEach(function (role) {
+      var sel = document.getElementById('v-' + role);
+      sel.innerHTML = '';
+      all.forEach(function (v) {
+        var o = document.createElement('option');
+        o.value = v.name; o.textContent = v.name + ' · ' + v.lang;
+        sel.appendChild(o);
+      });
+
+      var pick = saved['v-' + role] && all.filter(function (v) { return v.name === saved['v-' + role]; })[0];
+      if (!pick) {
+        var free = all.filter(function (v) { return used.indexOf(v) < 0; });
+        var pool = free.filter(function (v) { return quality(v) >= GOOD; });
+        pick = pool.filter(function (v) { return want[role].test(v.name); })[0]
+            || pool[0]
+            || free[0]
+            || all[0];
+      }
+      used.push(pick);
+      picks[role] = pick;
+      sel.value = pick.name;
+      sel.onchange = function () {
+        picks[role] = all.filter(function (v) { return v.name === sel.value; })[0];
+        saved['v-' + role] = sel.value;
+        store();
+      };
+    });
+
+    /* If no male-sounding voice cleared the bar, the rep is a good voice
+       pitched down rather than a bad one — keep him distinguishable. */
+    repShift = maleish.test(picks.rep.name) ? 0.95 : 0.86;
+
+    thin = quality(picks.rep) < 25;
+    engineNote();
+  }
+  if (tts) { fillVoices(); tts.addEventListener('voiceschanged', fillVoices); }
+  else { els.note.textContent = 'This browser has no speech synthesis — read along, or paste an ElevenLabs key under Voices.'; }
+
+  /* ── Studio voices: OpenAI first, then ElevenLabs, then the device ── */
+
+  els.oaProxy.value = saved.oaProxy || '';
+  els.oaKey.value = saved.oaKey || '';
+  els.key.value = saved.elKey || '';
+
+  els.oaProxy.oninput = function () { saved.oaProxy = els.oaProxy.value.trim(); store(); engineNote(); };
+  els.oaKey.oninput   = function () { saved.oaKey   = els.oaKey.value.trim();   store(); engineNote(); };
+  els.key.oninput     = function () { saved.elKey   = els.key.value.trim();     store(); engineNote(); };
+
+  ROLES.forEach(function (role) {
+    ['el', 'oa'].forEach(function (p) {
+      var sel = document.getElementById(p + '-' + role);
+      sel.value = saved[p + '-' + role] || (p === 'el' ? EL_DEFAULT : OA_DEFAULT)[role];
+      sel.onchange = function () { saved[p + '-' + role] = sel.value; store(); cache = {}; };
+    });
+  });
+
+  /* Committed clips beat live synthesis: no key, no latency, no cost, and
+     the same voices for everyone who opens the link. */
+  var rendered = null;
+
+  function findRendered() {
+    var tryBase = function (base) {
+      return fetch(base + 'manifest.json', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (m) {
+          if (!m || !m.files || m.files.length !== LINES.length) return null;
+          m.base = base;
+          return m;
+        })
+        .catch(function () { return null; });
+    };
+
+    return tryBase('audio/').then(function (m) { return m || tryBase(RAW_BASE); }).then(function (m) {
+      rendered = m;
+      var state = document.getElementById('files-state');
+      if (m) {
+        state.innerHTML = '<strong>Found ' + m.files.length + ' rendered clips</strong> ('
+          + m.engine + ', ' + new Date(m.rendered).toLocaleDateString() + ') — playing those.';
+      } else {
+        state.textContent = 'No rendered audio found yet.';
+      }
+      engineNote();
+    });
+  }
+
+  function engine() {
+    if (rendered) return 'files';
+    if (saved.oaProxy || saved.oaKey) return 'openai';
+    if (saved.elKey) return 'elevenlabs';
+    return 'device';
+  }
+
+  function engineNote() {
+    var e = engine();
+    els.human.hidden = e !== 'device';
+
+    if (e === 'files') {
+      els.note.className = 'note good';
+      els.note.textContent = 'Playing pre-rendered ' + rendered.engine + ' audio — real voices, no key needed.';
+    } else if (e === 'openai') {
+      els.note.className = 'note good';
+      els.note.textContent = saved.oaProxy
+        ? 'OpenAI voices are on through your proxy — the key stays on the server and never reaches this page.'
+        : 'OpenAI voices are on. The key is held in this browser and sent only to OpenAI; for a shared machine use the proxy instead.';
+    } else if (e === 'elevenlabs') {
+      els.note.className = 'note good';
+      els.note.textContent = 'ElevenLabs voices are on — the call plays in a studio voice. The key never leaves this browser except to ElevenLabs.';
+    } else {
+      els.note.className = 'note bad';
+      els.note.textContent = thin
+        ? 'This is your device’s built-in speech, and this machine only has basic synthetic voices — that is the robotic sound. Real voices need one of the three options under Voices.'
+        : 'This is your device’s built-in speech. It will sound synthetic however good the voice is — for a human read, use pre-rendered audio or an OpenAI or ElevenLabs key under Voices.';
+    }
+  }
+  engineNote();
+  findRendered();
+
+  var cache = {}, pending = {};
+
+  /* Pre-rendered clip: just play the file. */
+  function fileSpeak(i, then) {
+    audio = new Audio(rendered.base + rendered.files[i].file);
+    audio.playbackRate = parseFloat(els.rate.value);
+    audio.onended = then;
+    audio.onerror = function () {
+      els.note.className = 'note bad';
+      els.note.textContent = 'Could not play the rendered clip — falling back to this device’s voice.';
+      rendered = null;
+      deviceSpeak(i, then);
+    };
+    audio.play().catch(function () { then(); });
+  }
+
+  function studioSpeak(i, then) {
+    var mine = seq;
+    var play = function (url) {
+      if (mine !== seq) return;             // stopped or restarted while fetching
+      audio = new Audio(url);
+      audio.playbackRate = parseFloat(els.rate.value);
+      audio.onended = then;
+      audio.onerror = function () { then(); };
+      audio.play().catch(function () { then(); });
+      prefetch(i + 1);
+    };
+
+    fetchLine(i).then(play).catch(function (err) {
+      if (mine !== seq) return;
+      els.note.className = 'note bad';
+      els.note.textContent = (engine() === 'openai' ? 'OpenAI' : 'ElevenLabs')
+        + ' speech failed (' + err.message + ') — falling back to the device voice.';
+      deviceSpeak(i, then);
+    });
+  }
+
+  /* One request per line, cached, so a replay costs nothing. */
+  function fetchLine(i) {
+    var role = LINES[i][0], e = engine();
+    var voice = saved[(e === 'openai' ? 'oa-' : 'el-') + role]
+             || (e === 'openai' ? OA_DEFAULT : EL_DEFAULT)[role];
+    var key = e + '|' + voice + '|' + i;
+    if (cache[key]) return Promise.resolve(cache[key]);
+    if (pending[key]) return pending[key];      // play and prefetch can race
+
+    var url, opts;
+
+    if (e === 'openai') {
+      var base = saved.oaProxy ? saved.oaProxy.replace(/\/$/, '') + '/speech'
+                               : 'https://api.openai.com/v1/audio/speech';
+      var head = { 'Content-Type': 'application/json' };
+      if (!saved.oaProxy) head['Authorization'] = 'Bearer ' + saved.oaKey;
+      url = base;
+      opts = {
+        method: 'POST',
+        headers: head,
+        body: JSON.stringify({
+          model: 'gpt-4o-mini-tts',
+          voice: voice,
+          input: LINES[i][1],
+          instructions: OA_STYLE[role],
+          response_format: 'mp3'
+        })
+      };
+    } else {
+      url = 'https://api.elevenlabs.io/v1/text-to-speech/' + voice + '?output_format=mp3_44100_128';
+      opts = {
+        method: 'POST',
+        headers: { 'xi-api-key': saved.elKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: LINES[i][1],
+          model_id: 'eleven_flash_v2_5',
+          voice_settings: { stability: 0.4, similarity_boost: 0.75, style: 0.25, use_speaker_boost: true }
+        })
+      };
+    }
+
+    var job = fetch(url, opts).then(function (res) {
+      if (!res.ok) {
+        return res.json().catch(function () { return null; }).then(function (j) {
+          var d = j && (j.detail || j.error);
+          throw new Error((d && (d.message || d.status)) || (res.status + ' ' + res.statusText));
+        });
+      }
+      return res.blob();
+    }).then(function (blob) {
+      var obj = URL.createObjectURL(blob);
+      cache[key] = obj;
+      delete pending[key];
+      return obj;
+    }).catch(function (err) {
+      delete pending[key];
+      throw err;
+    });
+
+    pending[key] = job;
+    return job;
+  }
+
+  /* Fetch the next line while this one plays, so turns run back to back. */
+  function prefetch(i) { if (engine() !== 'device' && i < LINES.length) fetchLine(i).catch(function () {}); }
+
+  /* ── Device speech ───────────────────────────────────────────────── */
+
+  function deviceSpeak(i, then) {
+    if (!tts) { then(); return; }
+    var u = new SpeechSynthesisUtterance(LINES[i][1]);
+    var v = picks[LINES[i][0]];
+    if (v) { u.voice = v; u.lang = v.lang; }
+    u.rate = parseFloat(els.rate.value) * (LINES[i][0] === 'yuki' ? 0.97 : 1);
+    u.pitch = LINES[i][0] === 'rep' ? repShift : 1.03;
+
+    var done = false;
+    var finishLine = function () { if (!done) { done = true; then(); } };
+    u.onend = finishLine;
+    u.onerror = finishLine;
+    tts.speak(u);
+
+    /* A device with no installed voice never fires onend — don't hang there. */
+    setTimeout(function () { if (!tts.speaking && !tts.paused) finishLine(); }, 1500);
+  }
+
+  function mark(i) {
+    rows.forEach(function (r, j) {
+      r.classList.toggle('on', j === i);
+      r.classList.toggle('done', i >= 0 && j < i);
+    });
+    if (i >= 0 && rows[i]) rows[i].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+
+  function stopAll() {
+    if (gap) { clearTimeout(gap); gap = null; }
+    if (tts) tts.cancel();
+    if (audio) { audio.pause(); audio = null; }
+    inFlight = false;
+  }
+
+  /* Every callback carries the run counter it was started under, so a line
+     that was stopped or restarted can never resurrect its old run. */
+  function startLine(i, alone) {
+    var mine = seq;
+    inFlight = true;
+    mark(i);
+
+    var done = function () {
+      if (mine !== seq) return;
+      inFlight = false;
+      if (!playing) return;                    // paused exactly as the line ended
+      if (alone) { finish(); return; }
+      gap = setTimeout(function () {
+        gap = null;
+        if (mine === seq && playing) step();
+      }, 260);
+    };
+
+    var e = engine();
+    if (e === 'files') fileSpeak(i, done);
+    else if (e === 'device') deviceSpeak(i, done);
+    else studioSpeak(i, done);
+  }
+
+  function step() {
+    if (!playing) return;
+    if (at >= LINES.length) { finish(); return; }
+    startLine(at++, false);
+  }
+
+  /* Three states: idle, playing, paused. */
+  function setControls(state) {
+    els.play.disabled  = state === 'playing';
+    els.pause.disabled = state !== 'playing';
+    els.stop.disabled  = state === 'idle';
+    els.play.textContent = state === 'paused' ? '▶ Resume' : '▶ Play';
+  }
+  setControls('idle');
+
+  function finish() {
+    seq++;
+    stopAll();
+    playing = false;
+    at = 0;
+    setControls('idle');
+    mark(-1);
+  }
+
+  els.play.onclick = function () {
+    if (playing) return;
+
+    /* Paused mid-sentence: pick the sentence back up where it stopped. */
+    if (inFlight && (audio || (tts && tts.paused))) {
+      playing = true;
+      setControls('playing');
+      if (audio) audio.play().catch(function () {}); else tts.resume();
+      return;
+    }
+
+    /* Paused while a line was still being fetched — replay that line. */
+    if (inFlight) {
+      seq++;
+      stopAll();
+      playing = true;
+      setControls('playing');
+      startLine(Math.max(0, at - 1), false);
+      return;
+    }
+
+    /* Paused in the gap between lines: carry on with the next one. */
+    if (at > 0 && at < LINES.length) {
+      playing = true;
+      setControls('playing');
+      step();
+      return;
+    }
+
+    seq++;                                     // start from the top
+    stopAll();
+    at = 0;
+    playing = true;
+    setControls('playing');
+    prefetch(0);
+    step();
+  };
+
+  els.pause.onclick = function () {
+    if (!playing) return;
+    playing = false;
+    if (gap) { clearTimeout(gap); gap = null; }
+    if (inFlight) { if (audio) audio.pause(); else if (tts) tts.pause(); }
+    setControls('paused');                     // the current line stays lit
+  };
+
+  els.stop.onclick = finish;
+  els.cfg.onclick = function () { els.panel.classList.toggle('open'); };
+
+  els.human.onclick = function () {
+    els.panel.classList.add('open');
+    els.panel.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    els.oaKey.focus();
+  };
+  els.rate.oninput = function () {
+    els.rateVal.textContent = (+els.rate.value).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') + '×';
+    if (audio) audio.playbackRate = parseFloat(els.rate.value);
+  };
+
+  /* Tapping a line plays that line alone — Pause and Stop still apply. */
+  rows.forEach(function (r, i) {
+    r.onclick = function () {
+      seq++;
+      stopAll();
+      playing = true;
+      at = i + 1;
+      setControls('playing');
+      startLine(i, true);
+    };
+  });
+})();
+</script>
+</body>
+</html>

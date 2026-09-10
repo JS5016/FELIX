@@ -100,7 +100,9 @@ From there it supports a real back-and-forth:
 | --- | --- |
 | Who else is nearby with a suggestion? | Two HCP cards — priority, suite, walk time, the active suggestion and why it fired |
 | Tell me about Dr. Watanabe | Profile, prescribing bars (Pacrivex vs Momelyx and Ruxoril), and the last touch |
+| Remind me — what was my last interaction with her? | The one visit, what was covered, and what she is still owed |
 | Her interaction history in more detail | Last four touches, and the thread running through them |
+| Let's practice — you play Dr. Yuki | Goes into character as the doctor, then scores the run (below) |
 | Tell me about Dr. Raman | Ordered talking points, approved materials, a compliance warning |
 | Is she free right now? | Today's rep-access window with three slots and the knock-on to the next call |
 | Book it | Confirms the request, updates the route, queues content, sets a reminder |
@@ -109,6 +111,82 @@ From there it supports a real back-and-forth:
 | The three welcome pills | Active suggestions this week · not contacted in 4 weeks · changed behavior |
 
 Anything unrecognised gets a rotating fallback that steers you back to what FELIX handles.
+
+## Practice roleplay
+
+Say *"let's practice — you play Dr. Yuki and I'll play myself"* and FELIX stops being
+the assistant and becomes the doctor. It is the same conversation a rep would have in
+the corridor thirty seconds before walking in.
+
+In character he is time-pressed and unhelpful in the way a real prescriber is: two or
+three sentences a turn, and he only gives ground when the rep earns it. Each persona is
+an **objection ladder** built from what the CRM already knows that HCP has raised — for
+Dr. Watanabe, the pack was fine but her nurse was not, and behind that are coverage
+delays. Answer the objection in front of you and she moves to the next one; talk past
+it and she presses you on it again. After two presses the ladder advances anyway, so a
+live demo never stalls.
+
+Three personas ship: **Dr. Watanabe** (the open tolerability question), **Dr. Raman**
+(three unsupported starts, and a coordinator who is already busy) and **Dr. Okonkwo**
+(a Momelyx loyalist who wants a reason). Name one — *"practice with Dr. Okonkwo"* — or
+get Dr. Watanabe by default.
+
+Two ways out:
+
+- **"Felix, …"** steps out for one turn. He answers from the script — her history, the
+  approved materials — and the run stays live.
+- **"gotta go"** ends it. He breaks character and scores the run out of five:
+  continuity, discovery, the live objection, the access barrier, and the close. Every
+  miss comes back as one concrete fix, and anything off-label, any absolute safety
+  claim, unsupported head-to-head or guarantee is flagged separately.
+
+Nothing about a practice run is written to the CRM, and FELIX says so on every debrief.
+
+### Hearing it without running the app
+
+`practice-call-audio.html` is the whole demo script as a spoken call sheet, with
+**Play**, **Pause** and **Stop**: pause holds the sentence and resumes exactly where it
+stopped, and tapping any line plays just that one.
+
+**A browser's built-in speech always sounds synthetic.** For a human read the page needs
+real audio, and it takes it from the first of these that is available:
+
+**1. Pre-rendered clips — the version to use on stage.** Render the call once with a
+key you already have and the page plays the files: no key at play time, no latency, no
+network, and the same voices for everyone who opens it.
+
+```bash
+ELEVENLABS_API_KEY=... node render-audio.js            # Daniel, Sarah, Charlotte
+OPENAI_API_KEY=...     node render-audio.js --openai   # Ash, Sage, Coral
+node render-audio.js --list                            # just print the script
+```
+
+That writes `audio/` — one clip per line, a stitched `practice-call.mp3`, and a
+manifest. Commit it and the page finds it automatically, whether it is served next to
+the file or opened from the committed copy. `--rep=`, `--felix=` and `--yuki=` override
+individual voices.
+
+**2. A key in the page.** Open **Voices** and add either an OpenAI key (or a proxy URL —
+run `node server.js` and point it at `/api`, and the key never reaches the browser) or
+an ElevenLabs key. OpenAI lines are spoken by `gpt-4o-mini-tts` with per-part
+`instructions`, so the rep is directed as a rep in a corridor and Dr. Watanabe as a
+physician between patients; that direction is the difference between acted and read
+aloud. A key already saved in the app's gear panel is picked up automatically when both
+are served from the same origin.
+
+**3. This device.** The no-setup fallback, and the one that sounds robotic. The page
+ranks installed voices by how natural they actually are and gives the rep the best
+male-sounding real voice, pitching a female voice down if the machine has no good male
+one — but built-in voices vary hugely between machines, so the banner says plainly that
+this is device speech.
+
+Keys live only in that browser's `localStorage`. In modes 2 and 3 each line is fetched
+once and cached, with the next pre-fetched while the current one plays.
+
+The ladders, cues and marking scheme are data — `roleplay` at the bottom of
+`assets/script-data.js`. On the free-form engines the same behaviour comes from the
+`roleplay_partner` tool plus the practice section of the persona, so a real model plays
+the doctor instead.
 
 ## Editing the conversation
 
@@ -135,8 +213,8 @@ is what makes short replies like "yes" or "file it" resolve correctly — they o
 something after a specific question.
 
 Card types available to `blocks`: `hcp`, `rx` (prescribing bars), `kv`, `panel`,
-`checklist`, `slots`, `note`, `callout`. All are documented at the top of
-`script-data.js`.
+`checklist`, `slots`, `note`, `score` (the practice scorecard), `callout`. All are
+documented at the top of `script-data.js`.
 
 ## Voice engines
 
@@ -177,7 +255,7 @@ ephemeral token at `POST /v1/realtime/client_secrets` then exchanges SDP at `POS
 
 ## Tools
 
-`assets/tools.js` defines six function tools and executes them locally against a
+`assets/tools.js` defines seven function tools and executes them locally against a
 structured territory dataset. Both free-form engines share them, so a typed question
 and a spoken one have identical capability.
 
@@ -189,6 +267,7 @@ and a spoken one have identical capability.
 | `next_best_action` | One HCP's active suggestion, or the ranked territory list (`nearby_only`) |
 | `territory_insights` | 30-day behaviour change and everyone not contacted in 4+ weeks |
 | `crm_notes` | Read past notes, draft a new one, or file it after the rep approves |
+| `roleplay_partner` | The character sheet for a practice call, or the rubric to score one |
 
 In a call the model emits `response.function_call_arguments.done`; the tool runs and the
 result goes back as `conversation.item.create` / `function_call_output` followed by
@@ -205,7 +284,7 @@ index.html              Veeva shell, tabs, welcome / chat / call views, settings
 assets/styles.css       light orange theme and components
 assets/persona.js       who FELIX is — shared by every free-form engine
 assets/tools.js         the six tools + local executor over the territory data
-assets/script-data.js   the scripted conversation — edit this to change the demo
+assets/script-data.js   the scripted conversation + practice personas — edit this to change the demo
 assets/brain.js         OpenAI chat completions
 assets/voice.js         engines: browser, ElevenLabs TTS/agent, OpenAI TTS/realtime
 assets/app.js           call state machine, script matching, rendering

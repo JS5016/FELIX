@@ -17,6 +17,7 @@
  *   speech   spoken copy (numbers/abbreviations written out for TTS)
  *   blocks   rich cards (types documented in app.js blockHTML)
  *   chips    suggested follow-ups
+ *   roleplay hands the turn to the practice engine (see `roleplay` below)
  *
  * All names, products, and figures are fictional demo data.
  * ==========================================================================*/
@@ -130,7 +131,49 @@ const FELIX_SCRIPT = {
           ]
         }
       ],
-      chips: ['Her interaction history in more detail', 'Nearby doctors around her office', 'Log my call with Dr. Watanabe']
+      chips: ['What was my last interaction with her?', 'Practice this call with me', 'Nearby doctors around her office']
+    },
+
+    /* "Remind me — what was my last interaction with her?" — the one-line
+       recall a rep asks in the parking lot, not the full history. */
+    {
+      id: 'last_interaction',
+      keywords: [
+        { w: 3, any: ['last interaction', 'last time', 'when did i last', 'last touch', 'last visit', 'last call with', 'where did we leave', 'what did we discuss', 'what did we cover', 'what did she ask', 'what did he ask', 'remind me'] },
+        { w: 1, any: ['with her', 'about her', 'with him', 'yuki', 'watanabe'] }
+      ],
+      text: "September 1, in person — Pacrivex, early tolerability, and you walked her staff through the starter and titration pack. She asked for real-world discontinuation rates and you still owe her that.",
+      speech: "September first, in person. Pacrivex, early tolerability, and you walked her staff through the starter and titration pack. She asked for real world discontinuation rates in the first eight weeks, and that is still open — the approved summary cleared M L R on August twenty sixth and has not gone out. That is the thread to pick up.",
+      blocks: [
+        {
+          type: 'kv',
+          title: 'Last interaction · Dr. Yuki Watanabe',
+          rows: [
+            ['When', 'September 1 · in-person, Suite 310'],
+            ['Covered', 'Early tolerability in weeks 1–2'],
+            ['Also', 'Walked her staff through the starter and titration pack'],
+            ['She asked for', 'Real-world discontinuation rates, first 8 weeks'],
+            ['Outcome', 'No commitment — she wanted the data first']
+          ]
+        },
+        { type: 'callout', tone: 'warn', text: 'Still owed: the real-world discontinuation summary, MLR approved Aug 26 and not yet sent. Tolerability is now her third mention.' }
+      ],
+      chips: ['Practice this call with me', 'Her interaction history in more detail', 'Send her the discontinuation data']
+    },
+
+    /* ── Practice roleplay ───────────────────────────────────────────
+       Matching here only opens the door; assets/app.js hands every turn
+       after this one to the roleplay engine at the bottom of this file. */
+    {
+      id: 'roleplay_start',
+      roleplay: true,
+      keywords: [
+        { w: 3, any: ['practice', 'practise', 'role play', 'roleplay', 'rehearse', 'run a drill', 'mock call', 'dry run', 'run it with me'] },
+        { w: 3, any: ['you play', 'you be', 'pretend you are', 'pretend to be', 'act as', 'play the doctor', 'play dr', 'be dr'] },
+        { w: 1, any: ['before i meet', "let's go", 'lets go', 'i will play myself', "i'll play myself", 'with me', 'this call'] }
+      ],
+      text: '',
+      speech: ''
     },
 
     {
@@ -154,7 +197,7 @@ const FELIX_SCRIPT = {
         },
         { type: 'callout', tone: 'warn', text: 'Tolerability has come up three times and is still open. The real-world discontinuation data she asked for on Sept 1 has not been sent.' }
       ],
-      chips: ['Send her the discontinuation data', 'Nearby doctors around her office', 'Log my call with Dr. Watanabe']
+      chips: ['Send her the discontinuation data', 'Practice this call with me', 'Log my call with Dr. Watanabe']
     },
 
     {
@@ -522,34 +565,506 @@ const FELIX_SCRIPT = {
       id: 'help',
       keywords: [{ w: 3, any: ['what can you do', 'help', 'how does this work', 'what can i ask'] }],
       text: "I'm built for the gaps between calls. Try asking:",
-      speech: "I'm built for the gaps between calls. Ask me who's nearby with an active suggestion, brief me on a customer before you walk in, check whether someone can see you now, or log a call and I'll draft the note.",
+      speech: "I'm built for the gaps between calls. Ask me who's nearby with an active suggestion, brief me on a customer before you walk in, check whether someone can see you now, or log a call and I'll draft the note. I'll also play the doctor so you can practice the call first, then score how it went.",
       blocks: [{
         type: 'panel',
         title: 'Try asking',
         items: [
           '“Who else is in the same building with an active suggestion?”',
-          '“Tell me about Dr. Watanabe.”',
+          '“What was my last interaction with Dr. Watanabe?”',
+          '“Let’s practice — you play Dr. Yuki and I’ll play myself.”',
           '“Is Dr. Raman free right now?”',
-          '“Log my call with Dr. Watanabe.”',
-          '“Which HCPs have changed behavior recently?”'
+          '“Log my call with Dr. Watanabe.”'
         ]
       }],
-      chips: ['Who else is nearby with an active suggestion?', 'What are my active suggestions for this week?']
+      chips: ['Who else is nearby with an active suggestion?', 'Practice this call with me']
     }
   ],
 
   fallbacks: [
     {
-      text: "I didn't catch that. I can find nearby customers with active suggestions, brief you on an HCP, check availability, or log a call.",
-      speech: "I didn't catch that. I can find nearby customers with active suggestions, brief you on an H C P, check availability, or log a call.",
+      text: "I didn't catch that. I can find nearby customers with active suggestions, brief you on an HCP, run a practice call, or log a visit.",
+      speech: "I didn't catch that. I can find nearby customers with active suggestions, brief you on an H C P, run a practice call, or log a visit.",
       chips: ['Who is nearby with an active suggestion?', 'Tell me about Dr. Watanabe', 'What can you do?']
     },
     {
       text: "Still not sure what you're after — try one of these, or ask “what can you do?”",
       speech: "Still not sure what you're after. Try one of these, or ask what can you do.",
-      chips: ['What are my active suggestions for this week?', 'Log my call with Dr. Watanabe', "What's next today?"]
+      chips: ['What are my active suggestions for this week?', 'Practice this call with me', "What's next today?"]
     }
-  ]
+  ],
+
+  /* ==========================================================================
+   * PRACTICE ROLEPLAY
+   * --------------------------------------------------------------------------
+   * FELIX plays the doctor so the rep can rehearse before walking in, then
+   * breaks character and scores the run. Once `roleplay_start` matches, every
+   * turn goes to the engine in app.js instead of the matcher above.
+   *
+   * A persona is an objection ladder plus a marking scheme:
+   *
+   *   beats[]   the doctor's next line, in order. `cue` is what the rep has to
+   *             do to earn it; miss the cue and she `press`es instead, and
+   *             after `maxPress` misses the ladder moves on anyway so a demo
+   *             never stalls. `end: true` closes the roleplay after the line.
+   *   cues{}    per-dimension phrases that count as covering that dimension,
+   *             scored across every rep turn, not just the matching one.
+   *   coach{}   persona-specific replacement for a rubric row's hit/miss line.
+   *
+   * The doctor never volunteers a clinical figure — she raises the barriers
+   * the CRM already knows about and makes the rep do the work.
+   * ======================================================================== */
+  roleplay: {
+    defaultPersona: 'watanabe',
+    maxPress: 2,
+
+    /* Break character. Checked before anything else, so "gotta go" lands. */
+    exit: ['gotta go', 'got to go', 'have to go', 'end the roleplay', 'end roleplay', 'stop the roleplay',
+           'stop roleplay', 'end the practice', 'stop practice', 'end practice', 'break character',
+           'out of character', 'drop character', "that's enough", 'thats enough', 'how did i do',
+           'score me', 'debrief', 'end the drill', 'we are done', "we're done"],
+
+    /* Step outside the scene for one turn — "hold on, Felix, what did she ask for?" */
+    aside: ['hey felix', 'ok felix', 'okay felix', 'felix pause', 'pause felix', 'hold on felix',
+            'wait felix', 'felix what', 'felix remind', 'timeout', 'time out', 'pause the roleplay'],
+
+    asideFallback: {
+      text: "Still in practice — I can pull her history, her barriers, or the approved materials. Say “gotta go” and I'll score the run.",
+      speech: "Still in practice. I can pull her history, her barriers, or the approved materials. Say gotta go and I'll score the run."
+    },
+
+    /* Counts as discovery in any persona: an actual question, openly framed. */
+    openQuestion: ['have you', 'has your', 'how did', 'how are', 'how has', 'how many', 'what would',
+                   'what has', 'what do you', 'what did', "what's been", 'whats been', 'would that',
+                   'would it help', 'could you', 'can you tell', 'who on', 'when do', 'tell me',
+                   'walk me through', 'what is the', 'is that fair'],
+
+    /* Scanned on every rep turn regardless of persona. */
+    compliance: [
+      { any: ['off label', 'off-label', 'unapproved use', 'any indication', 'outside the label'],
+        flag: 'Off-label discussion — stay inside the approved indication.' },
+      { any: ['no side effects', 'zero side effects', 'completely safe', 'perfectly safe', 'safest', 'risk free', 'risk-free', 'no risk'],
+        flag: 'Absolute safety claim — not supportable and not approved copy.' },
+      { any: ['cure', 'cures it', 'cured'],
+        flag: '“Cure” is not an approved claim for Pacrivex.' },
+      { any: ['guarantee', 'guaranteed', 'i promise'],
+        flag: 'Guarantee language — drop it.' },
+      { any: ['better than momelyx', 'beats momelyx', 'superior to', 'outperforms'],
+        flag: 'Head-to-head superiority claim — the approved materials do not support one.' }
+    ],
+
+    /* Five dimensions, marked across the whole run. Personas can override
+       any hit/miss line through `coach`. */
+    rubric: [
+      { id: 'continuity', label: 'Picked up the thread',
+        hit:  'Opened on your last visit instead of starting cold.',
+        miss: 'You started from scratch. Name the last conversation in your first two sentences — it is the cheapest credibility you have.' },
+      { id: 'discovery', label: 'Asked before telling',
+        hit:  'Asked an open question early and let her answer.',
+        miss: 'You presented more than you asked. One open question tells you which objection is actually live today.' },
+      { id: 'objection', label: 'Handled the live objection',
+        hit:  'Heard the objection that was in front of you and answered that one.',
+        miss: 'The objection moved and you did not move with it.' },
+      { id: 'access', label: 'Answered the access barrier',
+        hit:  'Named the access support and who owns it.',
+        miss: 'An access barrier went unanswered. Coverage is the reason a start does not happen.' },
+      { id: 'close', label: 'Closed on a next step',
+        hit:  'Left with a specific, checkable next step.',
+        miss: 'No commitment was asked for. Close on the next appropriate patient, not on “I’ll follow up”.' }
+    ],
+
+    verdicts: [
+      { min: 5, text: "That's the call. Nothing I would change." },
+      { min: 4, text: 'Strong run — one gap to close.' },
+      { min: 3, text: 'Workable, but she left with an objection still open.' },
+      { min: 2, text: 'She stayed polite and unconvinced. Worth another run.' },
+      { min: 0, text: 'Rough. Run it again before you walk in.' }
+    ],
+
+    /* Every persona: never filed, never a real conversation. */
+    disclaimer: 'Practice runs are never written to the CRM, and nothing said in character counts as a call record.',
+
+    personas: {
+
+      /* ── Dr. Yuki Watanabe — the call the rep is about to walk into ── */
+      watanabe: {
+        id: 'watanabe',
+        name: 'Dr. Yuki Watanabe',
+        short: 'Dr. Watanabe',
+        initials: 'YW',
+        match: ['yuki', 'watanabe'],
+
+        setup: {
+          text: "Practice mode — I'm Dr. Watanabe from here, working from the objections she has actually raised with you. Say **“gotta go”** whenever you want and I'll break character and score the run.",
+          speech: "Practice mode. I'm Doctor Watanabe from here, working from the objections she has actually raised with you. Say gotta go whenever you want, and I'll break character and score the run. She's walking in now."
+        },
+        setupBlocks: [
+          {
+            type: 'kv',
+            title: 'Practice run · Dr. Yuki Watanabe',
+            rows: [
+              ['Scene', 'Suite 310, between patients — she has about two minutes'],
+              ['Open thread', 'Early tolerability, raised three times, still unanswered'],
+              ['She asked for', 'Real-world discontinuation rates, first 8 weeks'],
+              ['Scored on', 'Continuity · discovery · objection · access · close']
+            ]
+          },
+          { type: 'callout', tone: 'info', text: 'Say “gotta go” to break character. Say “Felix, …” to step out for one question without ending the run.' }
+        ],
+
+        opening: {
+          text: "Hi, this is Dr. Watanabe. I only have a minute — what did you want to cover on Pacrivex today?",
+          speech: "Hi, this is Doctor Watanabe. I only have a minute. What did you want to cover on Pacrivex today?"
+        },
+
+        beats: [
+          {
+            id: 'experience',
+            label: 'Asked how the starter pack landed',
+            cue: ['starter pack', 'titration', 'new patient', 'how did it go', 'chance to use', 'used it', 'tried it',
+                  'last time', 'since we', 'any patients', 'put anyone on', 'started anyone', 'how has it gone',
+                  'discontinuation', 'tolerability', 'first two weeks', 'weeks one'],
+            line: {
+              text: "We tried it once. The pack was fine, but my nurse still had questions and the patient called back confused. I don't have time for extra steps.",
+              speech: "We tried it once. The pack was fine, but my nurse still had questions, and the patient called back confused. I don't have time for extra steps."
+            },
+            press: [
+              { text: "I've got about forty seconds before my next patient. What's the ask?",
+                speech: "I've got about forty seconds before my next patient. What's the ask?" },
+              { text: "You'll have to be quicker than that.",
+                speech: "You'll have to be quicker than that." }
+            ]
+          },
+          {
+            id: 'workflow',
+            label: 'Moved to the workflow problem, not the drug',
+            cue: ['nurse', 'staff', 'one page', 'one-page', 'guide', 'walk your', 'walkthrough', 'walk through',
+                  'training', 'hand it', 'hand directly', 'patient guide', 'workflow', 'extra steps', 'your team',
+                  'ten minutes', 'save your'],
+            line: {
+              text: "Possibly. But I've also had a couple of patients run into coverage delays, and that makes me hesitant to start something new.",
+              speech: "Possibly. But I've also had a couple of patients run into coverage delays, and that makes me hesitant to start something new."
+            },
+            press: [
+              { text: "That's the part I already know. My problem is what happens after the prescription — my nurse fields those calls, not you.",
+                speech: "That's the part I already know. My problem is what happens after the prescription. My nurse fields those calls, not you." },
+              { text: "I'm not debating the molecule. I'm telling you the process costs my staff time.",
+                speech: "I'm not debating the molecule. I'm telling you the process costs my staff time." }
+            ]
+          },
+          {
+            id: 'access',
+            label: 'Answered the coverage barrier',
+            cue: ['coverage', 'access', 'prior auth', 'authorization', 'benefit', 'copay', 'hub', 'paperwork',
+                  'support team', 'specialty pharmacy', 'reimbursement', 'delays', 'access support', 'connect your team'],
+            line: {
+              text: "Alright. If your access team handles the paperwork and that guide keeps my nurse out of it, I'd consider it on the next appropriate patient.",
+              speech: "Alright. If your access team handles the paperwork, and that guide keeps my nurse out of it, I'd consider it on the next appropriate patient."
+            },
+            press: [
+              { text: "You're answering a question I didn't ask. The delays are the issue.",
+                speech: "You're answering a question I didn't ask. The delays are the issue." },
+              { text: "Again — coverage. If a patient waits two weeks, that lands on me, not on you.",
+                speech: "Again. Coverage. If a patient waits two weeks, that lands on me, not on you." }
+            ]
+          },
+          {
+            id: 'close',
+            label: 'Asked for a specific next step',
+            end: true,
+            cue: ['follow up', 'follow-up', 'next appropriate', 'next patient', 'next start', 'check back',
+                  'come back', 'circle back', 'stop back', 'see how it went', 'leave the', "i'll leave",
+                  'i will leave', 'send you', 'is that fair', 'does that work'],
+            line: {
+              text: "That's fair. Leave the guide, send my office the access contact, and follow up after my next start. I have to go.",
+              speech: "That's fair. Leave the guide, send my office the access contact, and follow up after my next start. I have to go."
+            },
+            press: [
+              { text: "Is there anything else? I'm already late.",
+                speech: "Is there anything else? I'm already late." },
+              { text: "Then we'll leave it there. Thanks for coming by.",
+                speech: "Then we'll leave it there. Thanks for coming by." }
+            ]
+          }
+        ],
+
+        cues: {
+          continuity: ['last time', 'last visit', 'september', 'when we spoke', 'when we met', 'titration',
+                       'starter pack', 'you asked', 'we discussed', 'we talked about', 'last month', 'picked up'],
+          discovery:  ['have you had a chance', 'how did it go', 'what happened', 'what did your nurse', 'how has'],
+          objection:  ['nurse', 'staff', 'one page', 'one-page', 'patient guide', 'walk through', 'walkthrough',
+                       'workflow', 'training', 'hand it', 'extra steps'],
+          access:     ['coverage', 'access', 'prior auth', 'authorization', 'benefit', 'copay', 'paperwork',
+                       'support', 'hub', 'reimbursement', 'specialty pharmacy'],
+          close:      ['follow up', 'follow-up', 'next appropriate', 'next patient', 'next start', 'check back',
+                       'come back', 'circle back', 'stop back', 'see how it went', "i'll leave", 'i will leave']
+        },
+
+        coach: {
+          objection: { hit:  'She told you the pack was fine and her nurse was not — you followed the objection to workflow.',
+                       miss: 'She told you the pack was fine and her nurse was not. You kept selling the pack; the objection had already moved to workflow.' },
+          access:    { hit:  'You named the access support instead of arguing with the coverage delays.',
+                       miss: 'Coverage delays were her second objection and you left them sitting. Name the access support and who on your side owns it.' },
+          continuity:{ miss: 'Three visits in a row have been about tolerability. Opening on September 1 costs you one sentence and saves her explaining herself again.' }
+        },
+
+        debrief: {
+          strong: [
+            'You picked up the September 1 thread, followed the objection when it moved, and closed on her next appropriate patient.',
+            'Keep the run short — she gave you a minute and you used it.'
+          ],
+          real: 'For the real call: the real-world discontinuation summary she asked for on September 1 is MLR approved and still unsent. Take it in with you.',
+          chips: ['Send her the discontinuation data', 'Run it again', "What's next today?"]
+        }
+      },
+
+      /* ── Dr. Priya Raman — the unsupported starts down the hall ────── */
+      raman: {
+        id: 'raman',
+        name: 'Dr. Priya Raman',
+        short: 'Dr. Raman',
+        initials: 'PR',
+        match: ['raman', 'priya'],
+
+        setup: {
+          text: "Practice mode — I'm Dr. Raman. Three new starts in thirty days, no titration support delivered, and she does not know that is a problem yet. Say **“gotta go”** to break character.",
+          speech: "Practice mode. I'm Doctor Raman. Three new starts in thirty days, no titration support delivered, and she doesn't know that's a problem yet. Say gotta go to break character."
+        },
+        setupBlocks: [
+          {
+            type: 'kv',
+            title: 'Practice run · Dr. Priya Raman',
+            rows: [
+              ['Scene', 'Suite 320, five minutes between patients'],
+              ['The gap', 'Three new starts in 30 days, no titration pack with her staff'],
+              ['Her view', 'Her staff handles starts; no one has told her there is a problem'],
+              ['Scored on', 'Continuity · discovery · objection · access · close']
+            ]
+          }
+        ],
+
+        opening: {
+          text: "You caught me between patients — five minutes. What is it?",
+          speech: "You caught me between patients. Five minutes. What is it?"
+        },
+
+        beats: [
+          {
+            id: 'starts',
+            label: 'Led with her own numbers',
+            cue: ['three', 'new starts', 'started', 'thirty days', '30 days', 'last month', 'titration', 'support',
+                  'pack', 'your patients', 'how are they doing'],
+            line: {
+              text: "My staff manages the starts, not me. If something were going wrong I'd have heard about it.",
+              speech: "My staff manages the starts, not me. If something were going wrong, I'd have heard about it."
+            },
+            press: [
+              { text: "I have four minutes now. What did you want?",
+                speech: "I have four minutes now. What did you want?" },
+              { text: "If this is a general detail, leave it with the front desk.",
+                speech: "If this is a general detail, leave it with the front desk." }
+            ]
+          },
+          {
+            id: 'evidence',
+            label: 'Made the risk concrete',
+            cue: ['drop', 'drop-off', 'discontinu', 'week two', 'first two weeks', 'watanabe', 'same gap',
+                  'called back', 'confused', 'nurse', 'happened on', 'early weeks', 'fragile'],
+            line: {
+              text: "That's a fair point. Dana handles our start paperwork — but she's also the one chasing prior authorizations all day, so I don't want to add to her list.",
+              speech: "That's a fair point. Dana handles our start paperwork, but she's also the one chasing prior authorizations all day, so I don't want to add to her list."
+            },
+            press: [
+              { text: "You'd have to show me an actual problem. My patients are doing fine as far as I know.",
+                speech: "You'd have to show me an actual problem. My patients are doing fine, as far as I know." },
+              { text: "I'm not going to change a process on a hunch.",
+                speech: "I'm not going to change a process on a hunch." }
+            ]
+          },
+          {
+            id: 'access',
+            label: 'Took work off Dana, not added it',
+            cue: ['dana', 'access', 'prior auth', 'authorization', 'coverage', 'paperwork', 'we handle', 'our team',
+                  'support', 'ten minutes', 'take it off', 'save her'],
+            line: {
+              text: "If it genuinely saves Dana time, do it. Ten minutes with her while I'm in clinic — not with me.",
+              speech: "If it genuinely saves Dana time, then do it. Ten minutes with her while I'm in clinic. Not with me."
+            },
+            press: [
+              { text: "That still sounds like more work for my staff.",
+                speech: "That still sounds like more work for my staff." },
+              { text: "Who is actually doing this, you or Dana?",
+                speech: "Who is actually doing this? You, or Dana?" }
+            ]
+          },
+          {
+            id: 'close',
+            label: 'Booked the time',
+            end: true,
+            cue: ['today', 'now', 'this afternoon', 'window', 'book', 'schedule', 'come back', 'follow up',
+                  'twenty minutes', 'end of the window', 'set it up', 'tomorrow'],
+            line: {
+              text: "Fine — catch Dana in the afternoon window and set it up with her. If it works, tell me at my next appointment.",
+              speech: "Fine. Catch Dana in the afternoon window and set it up with her. If it works, tell me at my next appointment."
+            },
+            press: [
+              { text: "I need to get back. Anything else?",
+                speech: "I need to get back. Anything else?" },
+              { text: "Leave it with Dana and we'll see.",
+                speech: "Leave it with Dana, and we'll see." }
+            ]
+          }
+        ],
+
+        cues: {
+          continuity: ['last time', 'five weeks', 'thirty eight days', '38 days', 'when i was here', 'last visit', 'since'],
+          discovery:  ['how are', 'what has', 'who on your', 'how does your', 'what happens when', 'who handles'],
+          objection:  ['dana', 'staff', 'nurse', 'titration', 'pack', 'walk through', 'walkthrough', 'ten minutes', 'take it off'],
+          access:     ['prior auth', 'authorization', 'coverage', 'access', 'paperwork', 'support', 'benefit'],
+          close:      ['book', 'schedule', 'this afternoon', 'window', 'come back', 'follow up', 'set it up', 'tomorrow']
+        },
+
+        coach: {
+          objection: { hit:  'You made the gap concrete with what happened on Dr. Watanabe’s panel instead of asserting it.',
+                       miss: 'She will not act on a hunch. The three unsupported starts only matter once you show her the drop-offs that followed the same gap.' },
+          access:    { hit:  'You framed it as work taken off Dana, which is the only version she says yes to.',
+                       miss: 'Everything you offered added to her staff’s list. Frame the walkthrough as time saved for Dana, not time spent.' }
+        },
+
+        debrief: {
+          strong: [
+            'You led with her own numbers, made the risk concrete, and routed the work to Dana instead of to her.',
+            'That is the version that fits inside five minutes.'
+          ],
+          real: 'For the real call: Dana has a 20-minute slot in about 20 minutes, and the suggestion expires in 5 days.',
+          chips: ['Is she free right now?', 'Run it again', 'Tell me about Dr. Raman']
+        }
+      },
+
+      /* ── Dr. Marcus Okonkwo — the competitor loyalist ──────────────── */
+      okonkwo: {
+        id: 'okonkwo',
+        name: 'Dr. Marcus Okonkwo',
+        short: 'Dr. Okonkwo',
+        initials: 'MO',
+        match: ['okonkwo', 'marcus'],
+
+        setup: {
+          text: "Practice mode — I'm Dr. Okonkwo. Momelyx loyalist, 14 to 4 against you, and tolerability is his stated reason. Say **“gotta go”** to break character.",
+          speech: "Practice mode. I'm Doctor Okonkwo. Momelyx loyalist, fourteen to four against you, and tolerability is his stated reason. Say gotta go to break character."
+        },
+        setupBlocks: [
+          {
+            type: 'kv',
+            title: 'Practice run · Dr. Marcus Okonkwo',
+            rows: [
+              ['Scene', 'Suite 145, ground floor — he rarely runs long'],
+              ['His position', 'Momelyx works for him; no reason to change'],
+              ['Stated objection', 'Tolerability in the first two weeks, raised in July'],
+              ['Scored on', 'Continuity · discovery · objection · access · close']
+            ]
+          }
+        ],
+
+        opening: {
+          text: "I write Momelyx and my patients do well on it. What's changed since July?",
+          speech: "I write Momelyx, and my patients do well on it. What's changed since July?"
+        },
+
+        beats: [
+          {
+            id: 'why_now',
+            label: 'Gave him a reason to re-open it',
+            cue: ['july', 'last time', 'tolerability', 'new data', 'approved', 'summary', 'since we spoke', 'changed',
+                  'discontinuation', 'first two weeks', 'weeks one'],
+            line: {
+              text: "That's the part I'm skeptical about. The two patients I started had trouble early, and I moved them back.",
+              speech: "That's the part I'm skeptical about. The two patients I started had trouble early, and I moved them back."
+            },
+            press: [
+              { text: "I'm not looking to change anything today.",
+                speech: "I'm not looking to change anything today." },
+              { text: "You'll need to give me a reason that isn't a brochure.",
+                speech: "You'll need to give me a reason that isn't a brochure." }
+            ]
+          },
+          {
+            id: 'evidence',
+            label: 'Answered with approved evidence, not opinion',
+            cue: ['summary', 'data', 'approved', 'real world', 'real-world', 'eight weeks', 'titration', 'starter pack',
+                  'dose', 'ramp', 'show you', 'on screen', 'prescribing information'],
+            line: {
+              text: "Alright, I'll look at it. Though honestly, half my hesitation is that switching creates coverage headaches for my front office.",
+              speech: "Alright, I'll look at it. Though honestly, half my hesitation is that switching creates coverage headaches for my front office."
+            },
+            press: [
+              { text: "Everyone has a summary. What does it actually show?",
+                speech: "Everyone has a summary. What does it actually show?" },
+              { text: "I've heard the claim. I want the data behind it.",
+                speech: "I've heard the claim. I want the data behind it." }
+            ]
+          },
+          {
+            id: 'access',
+            label: 'Cleared the office-level friction',
+            cue: ['coverage', 'access', 'formulary', 'prior auth', 'authorization', 'front office', 'paperwork',
+                  'support', 'copay', 'benefit', 'tier'],
+            line: {
+              text: "That helps. I'm not moving my panel, but I'd try one new start if the first two weeks are covered properly.",
+              speech: "That helps. I'm not moving my panel, but I'd try one new start if the first two weeks are covered properly."
+            },
+            press: [
+              { text: "You're still talking about the drug. My problem is the office.",
+                speech: "You're still talking about the drug. My problem is the office." },
+              { text: "Coverage. That's the question.",
+                speech: "Coverage. That's the question." }
+            ]
+          },
+          {
+            id: 'close',
+            label: 'Asked for the one start',
+            end: true,
+            cue: ['one start', 'one patient', 'next appropriate', 'next patient', 'try', 'would you consider',
+                  'follow up', 'come back', 'check back', 'is that fair'],
+            line: {
+              text: "One patient. Send the summary and the titration pack to my nurse, and ask me about it in a month.",
+              speech: "One patient. Send the summary and the titration pack to my nurse, and ask me about it in a month."
+            },
+            press: [
+              { text: "Was there anything else?",
+                speech: "Was there anything else?" },
+              { text: "Then leave the materials and we'll talk another time.",
+                speech: "Then leave the materials, and we'll talk another time." }
+            ]
+          }
+        ],
+
+        cues: {
+          continuity: ['july', 'last time', 'when we spoke', 'you raised', 'you mentioned', 'three weeks ago', 'my email'],
+          discovery:  ['what would it take', 'what have you seen', 'how do you decide', 'what happened with', 'which patients'],
+          objection:  ['tolerability', 'titration', 'starter pack', 'summary', 'real world', 'real-world', 'eight weeks', 'dose', 'ramp'],
+          access:     ['coverage', 'formulary', 'prior auth', 'authorization', 'front office', 'paperwork', 'support', 'copay', 'tier'],
+          close:      ['one start', 'one patient', 'next appropriate', 'next patient', 'would you consider', 'follow up', 'come back', 'check back']
+        },
+
+        coach: {
+          objection: { hit:  'You answered his early-tolerability experience with the approved summary rather than an opinion.',
+                       miss: 'He gave you a real clinical experience and got a claim back. Answer it with the approved tolerability summary or not at all.' },
+          close:     { hit:  'You asked for one start, which is the only close he can say yes to today.',
+                       miss: 'Asking a loyalist to switch a panel ends the conversation. Ask for one new appropriate patient.' }
+        },
+
+        debrief: {
+          strong: [
+            'You re-opened a closed door with new approved data and asked for one start rather than the panel.',
+            'That is how a loyalist moves — one patient at a time.'
+          ],
+          real: 'For the real call: his suggestion expires in 11 days, and the early tolerability summary is on your tablet.',
+          chips: ['Why is Okonkwo only medium?', 'Run it again', "What's next today?"]
+        }
+      }
+    }
+  }
 };
 
 window.FELIX_SCRIPT = FELIX_SCRIPT;

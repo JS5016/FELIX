@@ -326,6 +326,54 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 .callout-warn { border-left-color: var(--md); background: var(--md-bg); color: #7A5A10; }
 .callout-good { border-left-color: var(--green); background: #EDFAF2; color: #16653C; }
 
+/* Practice scorecard */
+.score-head { display: flex; align-items: baseline; gap: 12px; margin: 0 0 14px; }
+.score-num { font-size: 26px; font-weight: 800; letter-spacing: -.01em; }
+.score-verdict { font-size: 14px; color: var(--ink-2); }
+
+.score-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 11px; }
+.score-row { display: flex; gap: 11px; align-items: flex-start; }
+.score-mark {
+  flex: none; width: 21px; height: 21px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 12px; font-weight: 800; line-height: 1;
+}
+.score-row.is-hit  .score-mark { background: #E7F8EE; color: #17864A; }
+.score-row.is-miss .score-mark { background: var(--md-bg); color: var(--md); }
+.score-body { display: flex; flex-direction: column; gap: 2px; }
+.score-label { font-size: 14.5px; font-weight: 600; }
+.score-note { font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+
+/* ── Practice roleplay ──────────────────────────────────────────── */
+
+.who-tag {
+  margin-left: 8px; padding: 2px 8px; border-radius: 999px;
+  background: var(--lo-bg); color: var(--lo);
+  font-size: 10px; font-weight: 800; letter-spacing: .07em;
+}
+.msg-aside .who-tag { background: var(--hi-bg); color: var(--hi); }
+
+/* In character: the doctor speaks, so it should not look like FELIX. */
+.msg-rp .msg-who { color: var(--lo); }
+.msg-rp .bubble {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--lo);
+  border-radius: 6px 16px 16px 6px;
+  font-style: italic;
+}
+
+.msg-aside .bubble { background: #FBF8F4; border-color: var(--line); }
+
+.live-turn.rp .live-role { color: var(--lo); }
+.live-turn.rp .live-text { background: #fff; border-color: var(--line); border-left: 3px solid var(--lo); font-style: italic; }
+
+/* A live run is visible from the composer, wherever you are on the page. */
+body.is-roleplay .composer {
+  border-color: var(--lo);
+  box-shadow: 0 4px 18px rgba(28,28,30,.07), 0 0 0 3px var(--lo-bg);
+}
+
 /* ── Composer ───────────────────────────────────────────────────── */
 
 .composer-wrap { flex: none; padding: 10px 22px 14px; }
