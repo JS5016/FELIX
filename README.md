@@ -100,7 +100,9 @@ From there it supports a real back-and-forth:
 | --- | --- |
 | Who else is nearby with a suggestion? | Two HCP cards — priority, suite, walk time, the active suggestion and why it fired |
 | Tell me about Dr. Watanabe | Profile, prescribing bars (Pacrivex vs Momelyx and Ruxoril), and the last touch |
+| Remind me — what was my last interaction with her? | The one visit, what was covered, and what she is still owed |
 | Her interaction history in more detail | Last four touches, and the thread running through them |
+| Let's practice — you play Dr. Yuki | Goes into character as the doctor, then scores the run (below) |
 | Tell me about Dr. Raman | Ordered talking points, approved materials, a compliance warning |
 | Is she free right now? | Today's rep-access window with three slots and the knock-on to the next call |
 | Book it | Confirms the request, updates the route, queues content, sets a reminder |
@@ -109,6 +111,41 @@ From there it supports a real back-and-forth:
 | The three welcome pills | Active suggestions this week · not contacted in 4 weeks · changed behavior |
 
 Anything unrecognised gets a rotating fallback that steers you back to what FELIX handles.
+
+## Practice roleplay
+
+Say *"let's practice — you play Dr. Yuki and I'll play myself"* and FELIX stops being
+the assistant and becomes the doctor. It is the same conversation a rep would have in
+the corridor thirty seconds before walking in.
+
+In character he is time-pressed and unhelpful in the way a real prescriber is: two or
+three sentences a turn, and he only gives ground when the rep earns it. Each persona is
+an **objection ladder** built from what the CRM already knows that HCP has raised — for
+Dr. Watanabe, the pack was fine but her nurse was not, and behind that are coverage
+delays. Answer the objection in front of you and she moves to the next one; talk past
+it and she presses you on it again. After two presses the ladder advances anyway, so a
+live demo never stalls.
+
+Three personas ship: **Dr. Watanabe** (the open tolerability question), **Dr. Raman**
+(three unsupported starts, and a coordinator who is already busy) and **Dr. Okonkwo**
+(a Momelyx loyalist who wants a reason). Name one — *"practice with Dr. Okonkwo"* — or
+get Dr. Watanabe by default.
+
+Two ways out:
+
+- **"Felix, …"** steps out for one turn. He answers from the script — her history, the
+  approved materials — and the run stays live.
+- **"gotta go"** ends it. He breaks character and scores the run out of five:
+  continuity, discovery, the live objection, the access barrier, and the close. Every
+  miss comes back as one concrete fix, and anything off-label, any absolute safety
+  claim, unsupported head-to-head or guarantee is flagged separately.
+
+Nothing about a practice run is written to the CRM, and FELIX says so on every debrief.
+
+The ladders, cues and marking scheme are data — `roleplay` at the bottom of
+`assets/script-data.js`. On the free-form engines the same behaviour comes from the
+`roleplay_partner` tool plus the practice section of the persona, so a real model plays
+the doctor instead.
 
 ## Editing the conversation
 
@@ -135,8 +172,8 @@ is what makes short replies like "yes" or "file it" resolve correctly — they o
 something after a specific question.
 
 Card types available to `blocks`: `hcp`, `rx` (prescribing bars), `kv`, `panel`,
-`checklist`, `slots`, `note`, `callout`. All are documented at the top of
-`script-data.js`.
+`checklist`, `slots`, `note`, `score` (the practice scorecard), `callout`. All are
+documented at the top of `script-data.js`.
 
 ## Voice engines
 
@@ -177,7 +214,7 @@ ephemeral token at `POST /v1/realtime/client_secrets` then exchanges SDP at `POS
 
 ## Tools
 
-`assets/tools.js` defines six function tools and executes them locally against a
+`assets/tools.js` defines seven function tools and executes them locally against a
 structured territory dataset. Both free-form engines share them, so a typed question
 and a spoken one have identical capability.
 
@@ -189,6 +226,7 @@ and a spoken one have identical capability.
 | `next_best_action` | One HCP's active suggestion, or the ranked territory list (`nearby_only`) |
 | `territory_insights` | 30-day behaviour change and everyone not contacted in 4+ weeks |
 | `crm_notes` | Read past notes, draft a new one, or file it after the rep approves |
+| `roleplay_partner` | The character sheet for a practice call, or the rubric to score one |
 
 In a call the model emits `response.function_call_arguments.done`; the tool runs and the
 result goes back as `conversation.item.create` / `function_call_output` followed by
@@ -205,7 +243,7 @@ index.html              Veeva shell, tabs, welcome / chat / call views, settings
 assets/styles.css       light orange theme and components
 assets/persona.js       who FELIX is — shared by every free-form engine
 assets/tools.js         the six tools + local executor over the territory data
-assets/script-data.js   the scripted conversation — edit this to change the demo
+assets/script-data.js   the scripted conversation + practice personas — edit this to change the demo
 assets/brain.js         OpenAI chat completions
 assets/voice.js         engines: browser, ElevenLabs TTS/agent, OpenAI TTS/realtime
 assets/app.js           call state machine, script matching, rendering

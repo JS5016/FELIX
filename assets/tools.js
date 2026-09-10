@@ -1,7 +1,7 @@
 /* ============================================================================
  * FELIX — tools
  * ----------------------------------------------------------------------------
- * Six function tools the model can call, plus a local executor over the demo
+ * Seven function tools the model can call, plus a local executor over the demo
  * territory data. Shared by both free-form engines:
  *
  *   realtime   declared in the session's `tools`; the model emits
@@ -309,6 +309,63 @@
           status: 'filed',
           name: h.name,
           confirmation: 'Call note synced to the CRM against today’s visit, and the follow-up is on tomorrow’s list.'
+        };
+      }
+    },
+
+    {
+      name: 'roleplay_partner',
+      description: 'Set up or score a practice call. phase "setup" returns the character sheet for the HCP the rep wants to rehearse with — demeanour, opening line, the objections to raise in order, and what a good call looks like. phase "debrief" returns the marking scheme to score the rep against once the run ends. Call setup before going into character and debrief before giving feedback.',
+      parameters: {
+        type: 'object',
+        properties: {
+          hcp: { type: 'string', description: 'HCP name or surname to play.' },
+          phase: { type: 'string', enum: ['setup', 'debrief'], description: 'setup before the run, debrief after it.' }
+        },
+        required: ['hcp']
+      },
+      run: a => {
+        const h = findHcp(a.hcp);
+        if (!h) return notFound(a.hcp);
+        const barrier = h.barriers[0];
+
+        if (a.phase === 'debrief') {
+          return {
+            name: h.name,
+            score_out_of: 5,
+            rubric: [
+              { id: 'continuity', criterion: 'Opened on the last interaction rather than cold: ' + h.last_touch.date + ', ' + h.last_touch.topic },
+              { id: 'discovery',  criterion: 'Asked at least one open question before presenting.' },
+              { id: 'objection',  criterion: 'Answered the objection that was actually live: ' + (barrier ? barrier.barrier : 'their stated concern') },
+              { id: 'access',     criterion: 'Addressed the access or workflow barrier instead of only the clinical one.' },
+              { id: 'close',      criterion: 'Closed on a specific, checkable next step — a named patient type or a return date.' }
+            ],
+            compliance_watchlist: [
+              'Off-label or unapproved-use discussion',
+              'Absolute safety claims ("no side effects", "completely safe")',
+              'Head-to-head superiority claims not in the approved materials',
+              'Guarantees of outcome'
+            ],
+            evidence_they_should_have_used: barrier ? barrier.evidence : 'The approved materials on the tablet.',
+            never_logged: 'A practice run is not a call. Nothing about it is written to the CRM.'
+          };
+        }
+
+        return {
+          name: h.name,
+          play_as: {
+            specialty: h.specialty,
+            demeanour: 'Time-pressed and unsentimental. Two or three sentences a turn, never more. Give ground only when the rep earns it.',
+            opening_line: 'Greet briefly, say how little time you have, and ask what the rep wants to cover.',
+            never: 'Never volunteer a clinical figure, never quote a study, and never accept a claim the rep has not supported with approved evidence.'
+          },
+          objections_in_order: (h.barriers || []).map(b => b.barrier)
+            .concat(['Access or coverage friction that lands on the staff, not the prescriber']),
+          what_unlocks_each: (h.barriers || []).map(b => b.counter),
+          history_to_react_to: h.history,
+          good_call_looks_like: h.nba.action,
+          break_character_on: ['gotta go', 'end the roleplay', 'stop', 'how did i do', 'debrief'],
+          then: 'Break character, score the run out of five with roleplay_partner phase "debrief", and give one concrete fix.'
         };
       }
     }
